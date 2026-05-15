@@ -1,0 +1,1953 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Skill Manager Report Viewer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f4f6fb; color: #1f2937; }
+    .container { max-width: 1400px; margin: 0 auto; padding: 24px; }
+    header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 32px; border-radius: 16px; margin-bottom: 24px; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    h1 { margin: 0 0 8px; font-size: 2rem; }
+    .subtitle { opacity: 0.9; }
+    .toolbar, .section { background: white; border-radius: 16px; padding: 24px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08); margin-bottom: 24px; }
+    body.share-mode header { padding: 24px 28px; margin-bottom: 18px; }
+    body.share-mode .toolbar { padding: 18px 20px; margin-bottom: 18px; }
+    body.share-mode .container { max-width: 1240px; padding: 18px; }
+    body.share-mode .section { padding: 20px; margin-bottom: 18px; }
+    body.share-mode .share-hidden { display: none !important; }
+    body.share-mode .share-priority { box-shadow: 0 10px 28px rgba(79, 70, 229, 0.12); border: 1px solid #c7d2fe; }
+    body.share-mode .grid-two.share-focus-grid { grid-template-columns: 1.6fr 0.9fr; }
+    .toolbar-actions { display: flex; justify-content: flex-end; gap: 12px; align-items: center; }
+    .toolbar input, .toolbar select { display: block; margin-top: 12px; }
+    .toolbar-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 16px; align-items: end; }
+    .control label { display: block; font-size: 0.85rem; color: #6b7280; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .control input, .control select { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font-size: 0.95rem; }
+    .pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+    .pill { background: #eef2ff; color: #4338ca; border-radius: 999px; padding: 6px 12px; font-size: 0.85rem; font-weight: 600; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .stat-card { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 12px; padding: 18px; }
+    .stat-card.metric-card { transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+    .stat-card.metric-card:hover { transform: translateY(-2px); box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08); }
+    .delta-positive { border-color: #86efac; background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%); }
+    .delta-negative { border-color: #fca5a5; background: linear-gradient(180deg, #fef2f2 0%, #ffffff 100%); }
+    .delta-neutral { border-color: #d1d5db; background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%); }
+    .delta-chip { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; }
+    .delta-chip.positive { background: #dcfce7; color: #166534; }
+    .delta-chip.negative { background: #fee2e2; color: #991b1b; }
+    .delta-chip.neutral { background: #e5e7eb; color: #374151; }
+    .delta-text-positive { color: #166534; font-weight: 700; }
+    .delta-text-negative { color: #b91c1c; font-weight: 700; }
+    .delta-text-neutral { color: #6b7280; font-weight: 700; }
+    .changed-row { background: linear-gradient(90deg, rgba(79,70,229,0.08) 0%, rgba(79,70,229,0) 100%); }
+    .added-row { background: linear-gradient(90deg, rgba(34,197,94,0.12) 0%, rgba(34,197,94,0) 100%); }
+    .removed-row { background: linear-gradient(90deg, rgba(239,68,68,0.12) 0%, rgba(239,68,68,0) 100%); }
+    .split-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+    .mini-stat { border: 1px solid #e5e7eb; border-radius: 10px; padding: 10px 12px; background: #fff; }
+    .stat-label { font-size: 0.85rem; color: #6b7280; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat-value { font-size: 1.8rem; font-weight: 700; margin-top: 8px; color: #4f46e5; }
+    .grid-two { display: grid; grid-template-columns: 1.3fr 1fr; gap: 24px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: left; font-size: 0.95rem; }
+    th { color: #6b7280; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .queue { display: grid; gap: 12px; }
+    .queue-card.action-impact-card.filtered-row { opacity: 0.58; }
+    .queue-card.action-impact-card.related-row { border-left-color: #8b5cf6; background: linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(255,255,255,1) 100%); }
+    .stat-card.metric-card.related-row { box-shadow: 0 8px 20px rgba(99,102,241,0.08); border-color: #818cf8; }
+    .queue-card.action-list-card { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, opacity 160ms ease; }
+    .queue-card.action-list-card:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+    .queue-card.action-list-card.active-row { border-color: #4338ca; background: linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(255,255,255,1) 100%); }
+    .queue-card.action-list-card.related-row { border-color: #8b5cf6; background: linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(255,255,255,1) 100%); }
+    .queue-card.recommendation-card { cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, opacity 160ms ease; }
+    .queue-card.recommendation-card:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+    .queue-card.recommendation-card.active-row { border-color: #4338ca; background: linear-gradient(90deg, rgba(99,102,241,0.12) 0%, rgba(255,255,255,1) 100%); }
+    .queue-card.recommendation-card.related-row { border-color: #8b5cf6; background: linear-gradient(90deg, rgba(139,92,246,0.08) 0%, rgba(255,255,255,1) 100%); }
+    .queue-card.recommendation-card.filtered-row { opacity: 0.58; }
+    .decision-badge { border-radius: 999px; padding: 4px 10px; font-size: 0.78rem; font-weight: 700; display: inline-flex; align-items: center; }
+    .decision-badge.accepted { background: #dcfce7; color: #166534; }
+    .decision-badge.dismissed { background: #fee2e2; color: #991b1b; }
+    .decision-badge.needs_review { background: #fef3c7; color: #92400e; }
+    .decision-controls { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .decision-button { appearance: none; border: 1px solid #d1d5db; background: #fff; color: #374151; border-radius: 999px; padding: 7px 12px; font-size: 0.82rem; font-weight: 700; cursor: pointer; }
+    .decision-button.active.accepted { border-color: #22c55e; background: #dcfce7; color: #166534; }
+    .decision-button.active.dismissed { border-color: #ef4444; background: #fee2e2; color: #991b1b; }
+    .decision-button.active.needs_review { border-color: #f59e0b; background: #fef3c7; color: #92400e; }
+    .decision-summary-card { border: 1px solid #fde68a; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%); }
+    .decision-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .decision-summary-value { font-size: 1.5rem; font-weight: 700; margin-top: 6px; color: #92400e; }
+    .operations-panel { border: 1px solid #c7d2fe; background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%); }
+    .operations-grid { display: grid; grid-template-columns: 1.2fr 0.9fr; gap: 18px; }
+    .operations-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+    .operations-list { display: grid; gap: 10px; margin-top: 14px; }
+    .operations-item { border: 1px solid #dbeafe; border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,0.92); }
+    .operations-item strong { display: block; }
+    .operations-item .muted { margin-top: 6px; }
+    .decision-summary-item { cursor: pointer; }
+    .decision-summary-item.active { border-color: #f59e0b; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.12); }
+    .skill-detail-card { border-top: 1px dashed #c7d2fe; padding: 14px 0 4px; }
+    .metric-detail-card { margin-top: 14px; border-top: 1px dashed #c7d2fe; padding-top: 14px; }
+    .clickable-row { cursor: pointer; }
+    .clickable-row:hover { background: #eef2ff; }
+    .clickable-row.active-row { background: #e0e7ff; }
+    .action-link { appearance: none; border: 0; background: transparent; color: #4338ca; font-weight: 600; cursor: pointer; padding: 0; }
+    .focus-summary { border: 1px solid #c7d2fe; background: linear-gradient(180deg, #eef2ff 0%, #ffffff 100%); }
+    .focus-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+    .focus-card { border: 1px solid #dbeafe; border-radius: 12px; padding: 14px; background: rgba(255,255,255,0.9); }
+    .focus-card.active { border-color: #818cf8; box-shadow: 0 6px 18px rgba(99,102,241,0.12); }
+    .focus-card .pill-row { margin-top: 10px; }
+    .muted { color: #6b7280; }
+    .focus-note { margin-top: 12px; color: #374151; line-height: 1.6; }
+    .skill-detail-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; }
+    .graph-panel { border: 1px solid #dbeafe; background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%); }
+    .graph-panel.share-compact { padding: 16px; }
+    .graph-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 12px; }
+    .graph-legend { display: flex; flex-wrap: wrap; gap: 8px; }
+    .graph-legend-item { display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; color: #4b5563; }
+    .graph-swatch { width: 10px; height: 10px; border-radius: 999px; display: inline-block; }
+    .graph-swatch.center { background: #4338ca; }
+    .graph-swatch.related { background: #a5b4fc; }
+    .graph-swatch.metric { background: #67e8f9; }
+    .graph-swatch.pair { background: #f59e0b; }
+    .graph-swatch.recommendation { background: #10b981; }
+    .graph-grid { display: grid; gap: 12px; }
+    .graph-node { border: 1px solid #c7d2fe; border-radius: 14px; padding: 14px; background: #fff; cursor: pointer; transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease; }
+    .graph-node:hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08); }
+    .graph-node.center { border-color: #4338ca; box-shadow: 0 8px 20px rgba(67, 56, 202, 0.12); }
+    .graph-node.related { border-color: #a5b4fc; }
+    .graph-node.pair { border-color: #f59e0b; background: linear-gradient(180deg, #fffbeb 0%, #ffffff 100%); }
+    .graph-node.recommendation { border-color: #10b981; background: linear-gradient(180deg, #ecfdf5 0%, #ffffff 100%); }
+    .graph-node-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+    .graph-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .graph-link { font-size: 0.85rem; color: #4b5563; padding-left: 14px; position: relative; }
+    .graph-link::before { content: '↳'; position: absolute; left: 0; color: #6366f1; }
+    .graph-empty { color: #6b7280; }
+    pre { white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; padding: 16px; border-radius: 12px; overflow: auto; }
+    @media (max-width: 960px) { .grid-two { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Skill Manager Report Viewer</h1>
+      <p class="subtitle">Load a JSON report generated by <code>auto-skill-manager report library --format json</code>, <code>auto-skill-manager inspect skill --format json</code>, or <code>auto-skill-manager optimize apply --format json</code>.</p>
+    </header>
+
+    <div class="toolbar">
+      <div class="toolbar-grid">
+        <div class="control">
+          <label for="reportFile"><strong>Choose report JSON</strong></label>
+          <input id="reportFile" type="file" accept="application/json">
+        </div>
+        <div class="control">
+          <label for="skillFilter">Filter skills</label>
+          <input id="skillFilter" type="text" placeholder="skill id or family">
+        </div>
+        <div class="control">
+          <label for="sortBy">Sort risk table</label>
+          <select id="sortBy">
+            <option value="rewrite_priority">Rewrite priority</option>
+            <option value="black_hole_risk">Black-hole risk</option>
+            <option value="competition_score">Competition score</option>
+            <option value="anchor_strength_score">Anchor strength</option>
+          </select>
+        </div>
+      </div>
+      <div class="toolbar-actions">
+        <button id="shareModeToggle" class="action-link" type="button">Enable share mode</button>
+      </div>
+      <p class="muted">This viewer is static and reads the report locally in the browser.</p>
+    </div>
+
+    <div id="app"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('reportFile');
+    const skillFilterInput = document.getElementById('skillFilter');
+    const sortBySelect = document.getElementById('sortBy');
+    const shareModeToggle = document.getElementById('shareModeToggle');
+    const app = document.getElementById('app');
+    let currentReport = null;
+    let recommendationDecisions = {};
+    let selectedSkillId = '';
+    let selectedPair = null;
+    let selectedActionId = '';
+    let selectedMetric = '';
+    let selectedDecisionFilter = '';
+    let shareMode = false;
+
+    fileInput.addEventListener('change', async (event) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      const text = await file.text();
+      try {
+        currentReport = JSON.parse(text);
+        restoreRecommendationDecisions(currentReport);
+        selectedSkillId = '';
+        selectedPair = null;
+        selectedActionId = '';
+        selectedMetric = '';
+        selectedRecommendationId = '';
+        syncHashState();
+        renderReport(currentReport);
+      } catch (error) {
+        app.innerHTML = `<div class="section"><h2>Invalid JSON</h2><pre>${String(error)}</pre></div>`;
+      }
+    });
+
+    skillFilterInput.addEventListener('input', () => {
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    });
+
+    sortBySelect.addEventListener('change', () => {
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    });
+
+    shareModeToggle.addEventListener('click', () => {
+      shareMode = !shareMode;
+      applyShareMode();
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    });
+
+    function applyShareMode() {
+      document.body.classList.toggle('share-mode', shareMode);
+      shareModeToggle.textContent = shareMode ? 'Disable share mode' : 'Enable share mode';
+    }
+
+    function shareModePill() {
+      return shareMode ? '<span class="pill">share=on</span>' : '';
+    }
+
+    function shareModeSectionClass(priority = false, hidden = false) {
+      return [priority ? 'share-priority' : '', hidden ? 'share-hidden' : ''].filter(Boolean).join(' ');
+    }
+
+    function loadStateFromHash() {
+      const params = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const filter = params.get('filter') || '';
+      const sort = params.get('sort') || 'rewrite_priority';
+      const selected = params.get('selected') || '';
+      const pair = params.get('pair') || '';
+      const action = params.get('action') || '';
+      const metric = params.get('metric') || '';
+      const recommendation = params.get('recommendation') || '';
+      const decisions = params.get('decisions') || '';
+      const decisionFilter = params.get('decision_filter') || '';
+      shareMode = params.get('share') === '1';
+      skillFilterInput.value = filter;
+      sortBySelect.value = ['rewrite_priority', 'black_hole_risk', 'competition_score', 'anchor_strength_score'].includes(sort)
+        ? sort
+        : 'rewrite_priority';
+      selectedSkillId = selected;
+      selectedActionId = action;
+      selectedMetric = metric;
+      selectedRecommendationId = recommendation;
+      selectedDecisionFilter = ['accepted', 'dismissed', 'needs_review'].includes(decisionFilter) ? decisionFilter : '';
+      if (pair.includes('::')) {
+        const [leftSkillId, rightSkillId] = pair.split('::');
+        selectedPair = leftSkillId && rightSkillId ? { left_skill_id: leftSkillId, right_skill_id: rightSkillId } : null;
+      } else {
+        selectedPair = null;
+      }
+      if (decisions) {
+        try {
+          recommendationDecisions = JSON.parse(decodeURIComponent(decisions));
+        } catch (_error) {
+          recommendationDecisions = recommendationDecisions || {};
+        }
+      }
+      applyShareMode();
+    }
+
+    function syncHashState() {
+      const params = new URLSearchParams();
+      const filter = skillFilterInput.value.trim();
+      if (filter) params.set('filter', filter);
+      if (sortBySelect.value && sortBySelect.value !== 'rewrite_priority') params.set('sort', sortBySelect.value);
+      if (selectedSkillId) params.set('selected', selectedSkillId);
+      if (selectedActionId) params.set('action', selectedActionId);
+      if (selectedMetric) params.set('metric', selectedMetric);
+      if (selectedRecommendationId) params.set('recommendation', selectedRecommendationId);
+      if (selectedDecisionFilter) params.set('decision_filter', selectedDecisionFilter);
+      if (shareMode) params.set('share', '1');
+      if (selectedPair) params.set('pair', `${selectedPair.left_skill_id}::${selectedPair.right_skill_id}`);
+      if (Object.keys(recommendationDecisions).length) params.set('decisions', encodeURIComponent(JSON.stringify(recommendationDecisions)));
+      const nextHash = params.toString();
+      if (window.location.hash.replace(/^#/, '') !== nextHash) {
+        window.location.hash = nextHash;
+      }
+    }
+
+    window.addEventListener('hashchange', () => {
+      loadStateFromHash();
+      if (currentReport) renderReport(currentReport);
+    });
+
+    loadStateFromHash();
+
+    function renderReport(report) {
+      if (report.report_type === 'skill_manager_optimization') {
+        renderOptimizationReport(report);
+        return;
+      }
+      if (report.report_type === 'skill_manager_library_diff') {
+        renderLibraryDiffReport(report);
+        return;
+      }
+      const highlights = report.highlights || {};
+      const library = report.sections?.library || report.library_scorecard || {};
+      const allRiskRows = report.views?.risk_table || [];
+      const allConflictRows = report.views?.conflict_queue || [];
+      const allRecommendationRows = hydrateRecommendationRows(report.views?.recommendation_queue || []);
+      const recommendationDecisionSummary = summarizeRecommendationDecisions(allRecommendationRows);
+      const selectedRecommendation = selectedRecommendationId
+        ? allRecommendationRows.find(item => item.id === selectedRecommendationId) || null
+        : null;
+      const recommendationSkillSet = new Set(selectedRecommendation?.skill_ids || []);
+      const riskTable = filterAndSortRiskTable(allRiskRows, recommendationSkillSet);
+      const conflictQueue = filterConflictQueue(allConflictRows, recommendationSkillSet);
+      const recommendationQueue = filterRecommendationQueue(allRecommendationRows);
+      const operationsPanel = renderOperationsPanel(recommendationQueue, recommendationDecisionSummary);
+      const skillFocus = report.views?.skill_focus || null;
+      const isSkillInspection = Boolean(highlights.is_skill_inspection);
+      const activeFilter = skillFilterInput.value.trim();
+      const effectiveFocus = selectedSkillId || activeFilter || (skillFocus?.skill_id || '');
+      const pairLabel = selectedPair ? `${selectedPair.left_skill_id}↔${selectedPair.right_skill_id}` : '';
+      const detailsPanel = renderDetailsPanel(allRiskRows, allConflictRows, allRecommendationRows, selectedRecommendation);
+
+      app.innerHTML = `
+        <div class="section ${shareModeSectionClass(true, false)}">
+          <h2>${isSkillInspection ? 'Skill Inspection Overview' : 'Library Overview'}</h2>
+          ${isSkillInspection ? renderSkillFocus(skillFocus) : ''}
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Library</div><div class="stat-value">${library.library_id || 'unknown'}</div></div>
+            <div class="stat-card"><div class="stat-label">Health</div><div class="stat-value">${highlights.health_status || 'unknown'}</div></div>
+            <div class="stat-card"><div class="stat-label">Skills</div><div class="stat-value">${library.size ?? '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Routing Stability</div><div class="stat-value">${library.predicted_routing_stability ?? '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Competition Density</div><div class="stat-value">${library.competition_density ?? '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Black-hole Exposure</div><div class="stat-value">${library.predicted_black_hole_exposure ?? '-'}</div></div>
+          </div>
+          <div class="pill-row">
+            <span class="pill">report=${report.report_type || 'unknown'}</span>
+            <span class="pill">health=${highlights.health_status || 'unknown'}</span>
+            ${shareModePill()}
+            ${activeFilter ? `<span class="pill">filter=${activeFilter}</span>` : ''}
+            ${selectedSkillId ? `<span class="pill">selected=${selectedSkillId}</span>` : ''}
+            ${selectedRecommendationId ? `<span class="pill">recommendation=${selectedRecommendationId}</span>` : ''}
+            <span class="pill">sort=${sortBySelect.value}</span>
+          </div>
+          <div class="pill-row">
+            <button class="action-link" type="button" onclick="exportCurrentView()">Export current view</button>
+            ${(effectiveFocus || selectedPair || selectedRecommendationId) ? `<button class="action-link" type="button" onclick="clearSelections()">Clear focus</button>` : ''}
+          </div>
+        </div>
+
+        ${recommendationDecisionSummary.total ? `
+          <div class="section decision-summary-card ${shareModeSectionClass(false, shareMode && !selectedRecommendationId)}">
+            <h2>Recommendation Decisions</h2>
+            <div class="decision-summary-grid">
+              <div class="stat-card decision-summary-item ${selectedDecisionFilter === '' ? 'active' : ''}" onclick="setDecisionFilter('')">
+                <div class="stat-label">Tracked</div>
+                <div class="decision-summary-value">${recommendationDecisionSummary.total}</div>
+              </div>
+              <div class="stat-card decision-summary-item ${selectedDecisionFilter === 'accepted' ? 'active' : ''}" onclick="setDecisionFilter('accepted')">
+                <div class="stat-label">Accepted</div>
+                <div class="decision-summary-value">${recommendationDecisionSummary.accepted}</div>
+              </div>
+              <div class="stat-card decision-summary-item ${selectedDecisionFilter === 'dismissed' ? 'active' : ''}" onclick="setDecisionFilter('dismissed')">
+                <div class="stat-label">Dismissed</div>
+                <div class="decision-summary-value">${recommendationDecisionSummary.dismissed}</div>
+              </div>
+              <div class="stat-card decision-summary-item ${selectedDecisionFilter === 'needs_review' ? 'active' : ''}" onclick="setDecisionFilter('needs_review')">
+                <div class="stat-label">Needs Review</div>
+                <div class="decision-summary-value">${recommendationDecisionSummary.needs_review}</div>
+              </div>
+            </div>
+          </div>
+        ` : ''}
+
+        ${operationsPanel}
+
+        ${shareMode ? '' : detailsPanel}
+
+        ${renderNeighborhoodPanel({
+          reportType: report.report_type,
+          riskRows: allRiskRows,
+          conflictRows: allConflictRows,
+          recommendationRows: allRecommendationRows,
+          skillRows: [],
+          actionCards: [],
+          metricCards: [],
+        })}
+
+        <div class="grid-two ${shareMode ? 'share-focus-grid' : ''}">
+          <div class="section ${shareModeSectionClass(true, false)}">
+            <h2>${isSkillInspection ? 'Skill Risk Table' : 'Risk Table'}</h2>
+            ${renderRiskTable(riskTable)}
+          </div>
+          <div>
+            <div class="section ${shareModeSectionClass(false, shareMode && !selectedRecommendationId)}">
+              <h2>Recommendation Queue</h2>
+              <div class="queue">${renderRecommendationQueue(recommendationQueue)}</div>
+            </div>
+            <div class="section ${shareModeSectionClass(false, shareMode)}">
+              <h2>${isSkillInspection ? 'Related Conflict Queue' : 'Conflict Queue'}</h2>
+              <div class="queue">${renderConflictQueue(conflictQueue)}</div>
+            </div>
+            ${shareMode && selectedRecommendationId ? detailsPanel : ''}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderLibraryDiffReport(report) {
+      const highlights = report.highlights || {};
+      const metricCards = report.views?.metric_delta_cards || [];
+      const skillRows = report.views?.skill_delta_table || [];
+      const activeFilter = skillFilterInput.value.trim().toLowerCase();
+      const filteredSkillRows = skillRows.filter(row => {
+        if (selectedSkillId && row.skill_id !== selectedSkillId) return false;
+        if (!activeFilter) return true;
+        return String(row.skill_id || '').toLowerCase().includes(activeFilter);
+      });
+
+      app.innerHTML = `
+        <div class="section ${shareModeSectionClass(true, false)}">
+          <h2>Library Diff Overview</h2>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Base Library</div><div class="stat-value">${highlights.base_library_id || '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Candidate Library</div><div class="stat-value">${highlights.candidate_library_id || '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Added Skills</div><div class="stat-value">${highlights.added_skill_count ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Removed Skills</div><div class="stat-value">${highlights.removed_skill_count ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Changed Skills</div><div class="stat-value">${highlights.changed_skill_count ?? 0}</div></div>
+          </div>
+          <div class="pill-row">
+            <span class="pill">report=${report.report_type || 'unknown'}</span>
+            ${shareModePill()}
+            ${selectedSkillId ? `<span class="pill">skill=${selectedSkillId}</span>` : ''}
+          </div>
+          <div class="pill-row">
+            <button class="action-link" type="button" onclick="exportCurrentView()">Export current view</button>
+            ${selectedSkillId ? `<button class="action-link" type="button" onclick="clearSelectedSkill()">Clear skill focus</button>` : ''}
+          </div>
+        </div>
+
+        <div class="section ${shareModeSectionClass(false, shareMode)}">
+          <h2>Metric Delta Cards</h2>
+          <div class="stats-grid">
+            ${metricCards.map(item => `
+              <div class="stat-card metric-card ${metricCardClass(item.direction)}">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                  <div>
+                    <div class="stat-label">${item.metric}</div>
+                    <div class="stat-value">${item.after}</div>
+                  </div>
+                  <span class="delta-chip ${deltaTone(item.direction)}">${directionLabel(item.direction)}</span>
+                </div>
+                <div class="split-stats">
+                  <div class="mini-stat">
+                    <div class="stat-label">Before</div>
+                    <div><strong>${item.before}</strong></div>
+                  </div>
+                  <div class="mini-stat">
+                    <div class="stat-label">Delta</div>
+                    <div class="${deltaTextClass(item.delta)}">${signedNumber(item.delta)}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('') || '<p class="muted">No metric deltas.</p>'}
+          </div>
+        </div>
+
+        ${renderNeighborhoodPanel({
+          reportType: report.report_type,
+          riskRows: [],
+          conflictRows: [],
+          recommendationRows: [],
+          skillRows: filteredSkillRows,
+          actionCards: [],
+          metricCards,
+        })}
+
+        <div class="section ${shareModeSectionClass(true, false)}">
+          <h2>Skill Delta Table</h2>
+          <table>
+            <thead>
+              <tr>
+                <th>Skill</th>
+                <th>Status</th>
+                <th>Competition Δ</th>
+                <th>Anchor Δ</th>
+                <th>Black Hole Δ</th>
+                <th>Rewrite Δ</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredSkillRows.map(row => `
+                <tr class="clickable-row ${row.status === 'added' ? 'added-row' : row.status === 'removed' ? 'removed-row' : row.changed ? 'changed-row' : ''} ${selectedSkillId === row.skill_id ? 'active-row' : ''}" onclick="selectSkillDelta('${row.skill_id}')">
+                  <td><strong>${row.skill_id}</strong></td>
+                  <td><span class="delta-chip ${row.status === 'added' ? 'positive' : row.status === 'removed' ? 'negative' : row.changed ? 'positive' : 'neutral'}">${row.status}</span></td>
+                  <td class="${deltaTextClass(row.competition_score_delta)}">${signedNumber(row.competition_score_delta)}</td>
+                  <td class="${deltaTextClass(row.anchor_strength_delta)}">${signedNumber(row.anchor_strength_delta)}</td>
+                  <td class="${deltaTextClass(row.black_hole_risk_delta)}">${signedNumber(row.black_hole_risk_delta)}</td>
+                  <td class="${deltaTextClass(row.rewrite_priority_delta)}">${signedNumber(row.rewrite_priority_delta)}</td>
+                </tr>
+              `).join('') || '<tr><td colspan="6" class="muted">No skill deltas.</td></tr>'}
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function renderOptimizationReport(report) {
+      const highlights = report.highlights || {};
+      const before = report.sections?.scorecard_before || {};
+      const after = report.sections?.scorecard_after || {};
+      const metricCards = report.views?.metric_delta_cards || [];
+      const allActionImpactCards = report.views?.action_impact_cards || [];
+      const activeFilter = skillFilterInput.value.trim().toLowerCase();
+      const metricFocusedActions = selectedMetric
+        ? allActionImpactCards.filter(item => Object.prototype.hasOwnProperty.call(item.metric_impacts || {}, selectedMetric))
+        : allActionImpactCards;
+      const skillFocusedActions = selectedSkillId
+        ? metricFocusedActions.filter(item => (item.changed_skill_ids || []).includes(selectedSkillId) || (item.target_skill_ids || []).includes(selectedSkillId))
+        : metricFocusedActions;
+      const actionImpactCards = selectedActionId
+        ? skillFocusedActions.filter(item => item.action_id === selectedActionId)
+        : skillFocusedActions;
+      const focusedAction = selectedActionId
+        ? allActionImpactCards.find(item => item.action_id === selectedActionId) || null
+        : null;
+      const relatedMetricSet = new Set(
+        focusedAction
+          ? Object.keys(focusedAction.metric_impacts || {})
+          : []
+      );
+      const focusSkillSet = new Set(
+        focusedAction
+          ? [...(focusedAction.changed_skill_ids || []), ...(focusedAction.target_skill_ids || [])]
+          : selectedSkillId
+            ? [selectedSkillId]
+            : []
+      );
+      const skillRows = (report.views?.skill_delta_table || []).filter(row => {
+        if (focusSkillSet.size && !focusSkillSet.has(row.skill_id)) return false;
+        if (!activeFilter) return true;
+        return String(row.skill_id || '').toLowerCase().includes(activeFilter);
+      });
+      const filteredSkillRows = skillRows
+        .sort((left, right) => Number(right.rewrite_priority_after ?? 0) - Number(left.rewrite_priority_after ?? 0));
+      const focusSummary = renderOptimizationFocusSummary({
+        metricCards,
+        allActionImpactCards,
+        actionImpactCards,
+        filteredSkillRows,
+        focusedAction,
+        relatedMetricSet,
+      });
+      const skillActionMap = buildSkillActionMap(allActionImpactCards);
+      const metricContextMap = buildMetricContextMap(allActionImpactCards, filteredSkillRows);
+      const appliedActionIds = report.views?.action_summary?.applied || [];
+      const skippedActionIds = report.views?.action_summary?.skipped || [];
+
+      app.innerHTML = `
+        <div class="section ${shareModeSectionClass(true, false)}">
+          <h2>Optimization Overview</h2>
+          <div class="stats-grid">
+            <div class="stat-card"><div class="stat-label">Library Before</div><div class="stat-value">${highlights.library_id_before || before.library_id || '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Library After</div><div class="stat-value">${highlights.library_id_after || after.library_id || '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Plan</div><div class="stat-value">${highlights.plan_id || '-'}</div></div>
+            <div class="stat-card"><div class="stat-label">Applied</div><div class="stat-value">${highlights.actions_applied ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Skipped</div><div class="stat-value">${highlights.actions_skipped ?? 0}</div></div>
+            <div class="stat-card"><div class="stat-label">Changed Skills</div><div class="stat-value">${highlights.changed_skill_count ?? 0}</div></div>
+          </div>
+          <div class="pill-row">
+            <span class="pill">report=${report.report_type || 'unknown'}</span>
+            ${shareModePill()}
+            ${(highlights.improved_metrics || []).map(item => `<span class="pill">improved=${item}</span>`).join('')}
+            ${(highlights.degraded_metrics || []).map(item => `<span class="pill">degraded=${item}</span>`).join('')}
+            ${selectedMetric ? `<span class="pill">metric=${selectedMetric}</span>` : ''}
+            ${selectedActionId ? `<span class="pill">action=${selectedActionId}</span>` : ''}
+            ${selectedSkillId ? `<span class="pill">skill=${selectedSkillId}</span>` : ''}
+          </div>
+          ${(selectedMetric || selectedActionId || selectedSkillId) ? '<div class="pill-row">' : ''}
+          ${selectedMetric ? '<button class="action-link" type="button" onclick="clearSelectedMetric()">Clear metric focus</button>' : ''}
+          ${(selectedMetric && (selectedActionId || selectedSkillId)) ? '<span class="muted">·</span>' : ''}
+          ${selectedActionId ? '<button class="action-link" type="button" onclick="clearSelectedAction()">Clear action focus</button>' : ''}
+          ${((selectedMetric || selectedActionId) && selectedSkillId) ? '<span class="muted">·</span>' : ''}
+          ${selectedSkillId ? '<button class="action-link" type="button" onclick="clearSelectedSkill()">Clear skill focus</button>' : ''}
+          ${(selectedMetric || selectedActionId || selectedSkillId) ? '</div>' : ''}
+        </div>
+
+        ${focusSummary}
+
+        ${renderNeighborhoodPanel({
+          reportType: report.report_type,
+          riskRows: [],
+          conflictRows: [],
+          recommendationRows: [],
+          skillRows: filteredSkillRows,
+          actionCards: actionImpactCards,
+          metricCards,
+        })}
+
+        <div class="section ${shareModeSectionClass(false, shareMode)}">
+          <h2>Metric Delta Cards</h2>
+          <div class="stats-grid">
+            ${metricCards.map(item => `
+              <div class="stat-card metric-card ${metricCardClass(item.direction)} ${selectedMetric === item.metric ? 'active-row' : ''} ${relatedMetricSet.has(item.metric) ? 'related-row' : ''}" onclick="selectMetric('${item.metric}')">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+                  <div>
+                    <div class="stat-label">${item.metric}</div>
+                    <div class="stat-value">${item.after}</div>
+                  </div>
+                  <span class="delta-chip ${deltaTone(item.direction)}">${directionLabel(item.direction)}</span>
+                </div>
+                <div class="split-stats">
+                  <div class="mini-stat">
+                    <div class="stat-label">Before</div>
+                    <div><strong>${item.before}</strong></div>
+                  </div>
+                  <div class="mini-stat">
+                    <div class="stat-label">Delta</div>
+                    <div class="${deltaTextClass(item.delta)}">${signedNumber(item.delta)}</div>
+                  </div>
+                </div>
+                ${selectedMetric === item.metric ? renderMetricDetailCard(item, metricContextMap.get(item.metric) || { actions: [], skills: [] }) : ''}
+              </div>
+            `).join('') || '<p class="muted">No metric deltas.</p>'}
+          </div>
+        </div>
+
+        <div class="grid-two ${shareMode ? 'share-focus-grid' : ''}">
+          <div class="section ${shareModeSectionClass(true, false)}">
+            <h2>Skill Delta Table</h2>
+            ${renderOptimizationSkillTable(filteredSkillRows, focusSkillSet, skillActionMap)}
+          </div>
+          <div>
+            <div class="section ${shareModeSectionClass(true, false)}">
+              <h2>Action Impact Chain</h2>
+              <div class="queue">${renderActionImpactCards(actionImpactCards, { relatedMetricSet, focusSkillSet })}</div>
+            </div>
+            <div class="section ${shareModeSectionClass(false, shareMode)}">
+              <h2>Applied Actions</h2>
+              <div class="queue">${renderActionList(appliedActionIds, allActionImpactCards, 'applied', 'No applied actions.')}</div>
+            </div>
+            <div class="section ${shareModeSectionClass(false, shareMode)}">
+              <h2>Skipped Actions</h2>
+              <div class="queue">${renderActionList(skippedActionIds, allActionImpactCards, 'skipped', 'No skipped actions.')}</div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderOptimizationFocusSummary(context) {
+      const {
+        metricCards,
+        allActionImpactCards,
+        actionImpactCards,
+        filteredSkillRows,
+        focusedAction,
+        relatedMetricSet,
+      } = context;
+      const selectedMetricCard = selectedMetric
+        ? metricCards.find(item => item.metric === selectedMetric) || null
+        : null;
+      const actionLabel = focusedAction
+        ? `${actionKindLabel(focusedAction)} · ${focusedAction.status}`
+        : 'No action focus';
+      const visibleSkillCount = filteredSkillRows.length;
+      const relatedActionCount = actionImpactCards.length;
+      const focusedChangedCount = filteredSkillRows.filter(row => row.changed).length;
+      const relatedMetricCount = relatedMetricSet.size;
+
+      if (!selectedMetric && !selectedActionId && !selectedSkillId) {
+        return `
+          <div class="section focus-summary">
+            <h2>Current Focus</h2>
+            <p class="muted">No active drilldown. Click a metric, action, or skill to trace the optimization path.</p>
+            <div class="focus-grid">
+              <div class="focus-card">
+                <div class="stat-label">Metric Focus</div>
+                <div><strong>All metrics</strong></div>
+              </div>
+              <div class="focus-card">
+                <div class="stat-label">Action Focus</div>
+                <div><strong>All actions</strong></div>
+              </div>
+              <div class="focus-card">
+                <div class="stat-label">Skill Focus</div>
+                <div><strong>All changed skills</strong></div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="section focus-summary">
+          <h2>Current Focus</h2>
+          <div class="focus-grid">
+            <div class="focus-card ${selectedMetric ? 'active' : ''}">
+              <div class="stat-label">Metric Focus</div>
+              <div><strong>${selectedMetricCard ? selectedMetricCard.metric : 'All metrics'}</strong></div>
+              <div class="muted" style="margin-top:6px;">
+                ${selectedMetricCard ? `${directionLabel(selectedMetricCard.direction)} · Δ ${signedNumber(selectedMetricCard.delta)}` : `${metricCards.length} metrics visible`}
+              </div>
+              <div class="pill-row">
+                ${selectedMetric ? '<button class="action-link" type="button" onclick="clearSelectedMetric()">Clear metric</button>' : ''}
+                ${relatedMetricCount ? `<span class="pill">related=${relatedMetricCount}</span>` : ''}
+              </div>
+            </div>
+            <div class="focus-card ${selectedActionId ? 'active' : ''}">
+              <div class="stat-label">Action Focus</div>
+              <div><strong>${selectedActionId || 'All actions'}</strong></div>
+              <div class="muted" style="margin-top:6px;">${selectedActionId ? actionLabel : `${allActionImpactCards.length} actions available`}</div>
+              <div class="pill-row">
+                <span class="pill">visible=${relatedActionCount}</span>
+                ${selectedActionId ? '<button class="action-link" type="button" onclick="clearSelectedAction()">Clear action</button>' : ''}
+              </div>
+            </div>
+            <div class="focus-card ${selectedSkillId ? 'active' : ''}">
+              <div class="stat-label">Skill Focus</div>
+              <div><strong>${selectedSkillId || 'All visible skills'}</strong></div>
+              <div class="muted" style="margin-top:6px;">${visibleSkillCount} visible · ${focusedChangedCount} changed</div>
+              <div class="pill-row">
+                ${selectedSkillId ? '<button class="action-link" type="button" onclick="clearSelectedSkill()">Clear skill</button>' : ''}
+                ${(selectedMetric || selectedActionId || selectedSkillId) ? '<button class="action-link" type="button" onclick="clearSelections()">Clear all</button>' : ''}
+              </div>
+            </div>
+          </div>
+          <div class="focus-note">
+            ${buildOptimizationFocusNarrative({ selectedMetricCard, focusedAction, selectedSkillId, relatedActionCount, visibleSkillCount, relatedMetricCount })}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderNeighborhoodPanel(context) {
+      const {
+        reportType,
+        riskRows = [],
+        conflictRows = [],
+        recommendationRows = [],
+        skillRows = [],
+        actionCards = [],
+        metricCards = [],
+      } = context;
+      const centerSkillId = selectedSkillId || inferCenterSkill({ riskRows, skillRows, actionCards, recommendationRows, conflictRows });
+      const nodes = buildNeighborhoodNodes({
+        centerSkillId,
+        riskRows,
+        conflictRows,
+        recommendationRows,
+        skillRows,
+        actionCards,
+        metricCards,
+      });
+      if (!nodes.length) return '';
+      return `
+        <div class="section graph-panel ${shareMode ? 'share-compact' : ''} ${shareModeSectionClass(false, false)}">
+          <div class="graph-header">
+            <div>
+              <h2>Neighborhood View</h2>
+              <div class="pill-row">
+                <span class="pill">report=${reportType || 'unknown'}</span>
+                ${centerSkillId ? `<span class="pill">center=${centerSkillId}</span>` : '<span class="pill">center=auto</span>'}
+                ${selectedMetric ? `<span class="pill">metric=${selectedMetric}</span>` : ''}
+                ${selectedActionId ? `<span class="pill">action=${selectedActionId}</span>` : ''}
+                ${selectedRecommendationId ? `<span class="pill">recommendation=${selectedRecommendationId}</span>` : ''}
+              </div>
+            </div>
+            <div class="graph-legend">
+              <span class="graph-legend-item"><span class="graph-swatch center"></span>center</span>
+              <span class="graph-legend-item"><span class="graph-swatch related"></span>related</span>
+              <span class="graph-legend-item"><span class="graph-swatch metric"></span>metric</span>
+              <span class="graph-legend-item"><span class="graph-swatch pair"></span>pair</span>
+              <span class="graph-legend-item"><span class="graph-swatch recommendation"></span>recommendation</span>
+            </div>
+          </div>
+          <div class="graph-grid">
+            ${nodes.map(node => renderNeighborhoodNode(node)).join('')}
+          </div>
+        </div>
+      `;
+    }
+
+    function inferCenterSkill(context) {
+      const { riskRows = [], skillRows = [], actionCards = [], recommendationRows = [], conflictRows = [] } = context;
+      if (selectedPair?.left_skill_id) return selectedPair.left_skill_id;
+      if (selectedRecommendationId) {
+        const recommendation = recommendationRows.find(item => item.id === selectedRecommendationId);
+        if (recommendation?.skill_ids?.length) return recommendation.skill_ids[0];
+      }
+      if (selectedActionId) {
+        const action = actionCards.find(item => item.action_id === selectedActionId);
+        if (action?.target_skill_ids?.length) return action.target_skill_ids[0];
+        if (action?.changed_skill_ids?.length) return action.changed_skill_ids[0];
+      }
+      return riskRows[0]?.skill_id || skillRows[0]?.skill_id || conflictRows[0]?.left_skill_id || '';
+    }
+
+    function buildNeighborhoodNodes(context) {
+      const {
+        centerSkillId,
+        riskRows,
+        conflictRows,
+        recommendationRows,
+        skillRows,
+        actionCards,
+        metricCards,
+      } = context;
+      const nodes = [];
+      if (centerSkillId) {
+        const risk = riskRows.find(item => item.skill_id === centerSkillId);
+        const skillDelta = skillRows.find(item => item.skill_id === centerSkillId);
+        nodes.push({
+          type: 'center',
+          title: centerSkillId,
+          subtitle: risk?.family || (skillDelta?.changed ? 'changed skill' : 'focused skill'),
+          pills: buildNeighborhoodPills({ risk, skillDelta }),
+          links: buildCenterLinks({ centerSkillId, conflictRows, recommendationRows, actionCards }),
+          clickTarget: { kind: 'skill', value: centerSkillId },
+          active: selectedSkillId === centerSkillId,
+        });
+      }
+
+      const relatedSkills = collectRelatedSkills({ centerSkillId, conflictRows, recommendationRows, actionCards, skillRows, riskRows });
+      relatedSkills.forEach(skillId => {
+        const risk = riskRows.find(item => item.skill_id === skillId);
+        const skillDelta = skillRows.find(item => item.skill_id === skillId);
+        nodes.push({
+          type: 'related',
+          title: skillId,
+          subtitle: risk?.family || (skillDelta?.status || 'related skill'),
+          pills: buildNeighborhoodPills({ risk, skillDelta }),
+          links: buildRelatedLinks({ skillId, centerSkillId, conflictRows, recommendationRows, actionCards }),
+          clickTarget: { kind: 'skill', value: skillId },
+          active: selectedSkillId === skillId,
+        });
+      });
+
+      if (selectedPair?.left_skill_id && selectedPair?.right_skill_id) {
+        nodes.push({
+          type: 'pair',
+          title: `${selectedPair.left_skill_id} ↔ ${selectedPair.right_skill_id}`,
+          subtitle: 'focused pair',
+          pills: ['pair', 'conflict focus'],
+          links: conflictRows
+            .filter(item =>
+              (item.left_skill_id === selectedPair.left_skill_id && item.right_skill_id === selectedPair.right_skill_id) ||
+              (item.left_skill_id === selectedPair.right_skill_id && item.right_skill_id === selectedPair.left_skill_id)
+            )
+            .slice(0, 2)
+            .map(item => `overlap=${item.overlap_score}`),
+          clickTarget: { kind: 'pair', value: `${selectedPair.left_skill_id}::${selectedPair.right_skill_id}` },
+          active: true,
+        });
+      }
+
+      if (selectedRecommendationId) {
+        const recommendation = recommendationRows.find(item => item.id === selectedRecommendationId) || null;
+        nodes.push({
+          type: 'recommendation',
+          title: selectedRecommendationId,
+          subtitle: recommendation?.type || 'focused recommendation',
+          pills: [
+            recommendation?.priority ? `priority=${recommendation.priority}` : null,
+            recommendation?.confidence ? `confidence=${recommendation.confidence}` : null,
+          ].filter(Boolean),
+          links: [
+            ...(recommendation?.skill_ids || []).slice(0, 3).map(skillId => `skill ${skillId}`),
+            recommendation?.mapped_action ? `action ${recommendation.mapped_action}` : null,
+          ].filter(Boolean),
+          clickTarget: { kind: 'recommendation', value: selectedRecommendationId },
+          active: true,
+        });
+      }
+
+      if (selectedMetric) {
+        const metric = metricCards.find(item => item.metric === selectedMetric);
+        nodes.push({
+          type: 'metric',
+          title: selectedMetric,
+          subtitle: 'focused metric',
+          pills: metric ? [`before=${metric.before}`, `after=${metric.after}`, `Δ ${signedNumber(metric.delta)}`, directionLabel(metric.direction)] : [],
+          links: actionCards
+            .filter(item => Object.prototype.hasOwnProperty.call(item.metric_impacts || {}, selectedMetric))
+            .slice(0, 4)
+            .map(item => `action ${item.action_id}`),
+          clickTarget: { kind: 'metric', value: selectedMetric },
+          active: Boolean(selectedMetric),
+        });
+      }
+
+      if (!nodes.length) {
+        nodes.push({
+          type: 'related',
+          title: 'No focus yet',
+          subtitle: 'Select a skill, pair, recommendation, metric, or action',
+          pills: [],
+          links: [],
+          clickTarget: null,
+          active: false,
+        });
+      }
+      return nodes.slice(0, 6);
+    }
+
+    function buildNeighborhoodPills(context) {
+      const { risk, skillDelta } = context;
+      const pills = [];
+      if (risk?.rewrite_priority != null) pills.push(`rewrite=${risk.rewrite_priority}`);
+      if (risk?.black_hole_risk != null) pills.push(`black_hole=${risk.black_hole_risk}`);
+      if (skillDelta?.status) pills.push(`status=${skillDelta.status}`);
+      if (skillDelta?.changed) pills.push('changed');
+      return pills.slice(0, 4);
+    }
+
+    function buildCenterLinks(context) {
+      const { centerSkillId, conflictRows, recommendationRows, actionCards } = context;
+      const links = [];
+      conflictRows.filter(item => item.left_skill_id === centerSkillId || item.right_skill_id === centerSkillId).slice(0, 3).forEach(item => {
+        const other = item.left_skill_id === centerSkillId ? item.right_skill_id : item.left_skill_id;
+        links.push(`conflict with ${other}`);
+      });
+      recommendationRows.filter(item => (item.skill_ids || []).includes(centerSkillId)).slice(0, 2).forEach(item => {
+        links.push(`recommendation ${item.id}`);
+      });
+      actionCards.filter(item => (item.target_skill_ids || []).includes(centerSkillId) || (item.changed_skill_ids || []).includes(centerSkillId)).slice(0, 2).forEach(item => {
+        links.push(`action ${item.action_id}`);
+      });
+      return links;
+    }
+
+    function buildRelatedLinks(context) {
+      const { skillId, centerSkillId, conflictRows, recommendationRows, actionCards } = context;
+      const links = [];
+      if (centerSkillId) links.push(`connected to ${centerSkillId}`);
+      conflictRows.filter(item => [item.left_skill_id, item.right_skill_id].includes(skillId)).slice(0, 2).forEach(item => {
+        links.push(`overlap=${item.overlap_score}`);
+      });
+      recommendationRows.filter(item => (item.skill_ids || []).includes(skillId)).slice(0, 1).forEach(item => {
+        links.push(`recommendation ${item.id}`);
+      });
+      actionCards.filter(item => (item.target_skill_ids || []).includes(skillId) || (item.changed_skill_ids || []).includes(skillId)).slice(0, 1).forEach(item => {
+        links.push(`action ${item.action_id}`);
+      });
+      return links;
+    }
+
+    function collectRelatedSkills(context) {
+      const { centerSkillId, conflictRows, recommendationRows, actionCards, skillRows, riskRows } = context;
+      const ids = new Set();
+      if (selectedPair) {
+        ids.add(selectedPair.left_skill_id);
+        ids.add(selectedPair.right_skill_id);
+      }
+      conflictRows.forEach(item => {
+        if (!centerSkillId || item.left_skill_id === centerSkillId || item.right_skill_id === centerSkillId) {
+          ids.add(item.left_skill_id);
+          ids.add(item.right_skill_id);
+        }
+      });
+      recommendationRows.forEach(item => {
+        if (!centerSkillId || (item.skill_ids || []).includes(centerSkillId)) {
+          (item.skill_ids || []).forEach(skillId => ids.add(skillId));
+        }
+      });
+      actionCards.forEach(item => {
+        [...(item.target_skill_ids || []), ...(item.changed_skill_ids || [])].forEach(skillId => ids.add(skillId));
+      });
+      skillRows.slice(0, 4).forEach(item => ids.add(item.skill_id));
+      riskRows.slice(0, 4).forEach(item => ids.add(item.skill_id));
+      if (centerSkillId) ids.delete(centerSkillId);
+      return [...ids].slice(0, 4);
+    }
+
+    function renderNeighborhoodNode(node) {
+      const onClick = node.clickTarget ? ` onclick="activateNeighborhoodNode('${node.clickTarget.kind}', '${node.clickTarget.value}')"` : '';
+      return `
+        <div class="graph-node ${node.type === 'center' ? 'center' : node.type === 'metric' ? 'metric' : node.type === 'pair' ? 'pair' : node.type === 'recommendation' ? 'recommendation' : 'related'} ${node.active ? 'active' : ''}"${onClick}>
+          <div class="graph-node-header">
+            <div>
+              <strong>${node.title}</strong>
+              <div class="muted" style="margin-top:6px;">${node.subtitle || ''}</div>
+            </div>
+            ${node.clickTarget?.kind === 'skill' && node.title ? `<button class="action-link" type="button" onclick="event.stopPropagation(); selectSkill('${node.title}')">Focus</button>` : node.clickTarget?.kind === 'metric' ? `<button class="action-link" type="button" onclick="event.stopPropagation(); selectMetric('${node.title}')">Focus</button>` : node.clickTarget?.kind === 'pair' ? `<button class="action-link" type="button" onclick="event.stopPropagation(); activateNeighborhoodNode('pair', '${node.clickTarget.value}')">Focus</button>` : node.clickTarget?.kind === 'recommendation' ? `<button class="action-link" type="button" onclick="event.stopPropagation(); activateNeighborhoodNode('recommendation', '${node.clickTarget.value}')">Focus</button>` : ''}
+          </div>
+          <div class="pill-row">
+            ${node.pills.map(item => `<span class="pill">${item}</span>`).join('') || '<span class="graph-empty">No metrics.</span>'}
+          </div>
+          <div class="graph-links">
+            ${node.links.map(item => `<span class="graph-link">${item}</span>`).join('') || '<span class="graph-empty">No visible edges.</span>'}
+          </div>
+        </div>
+      `;
+    }
+
+    function activateNeighborhoodNode(kind, value) {
+      if (!value) return;
+      if (kind === 'skill') {
+        selectSkill(value);
+        return;
+      }
+      if (kind === 'metric') {
+        selectMetric(value);
+        return;
+      }
+      if (kind === 'pair') {
+        const [leftSkillId, rightSkillId] = String(value).split('::');
+        if (leftSkillId && rightSkillId) selectPair(leftSkillId, rightSkillId);
+        return;
+      }
+      if (kind === 'recommendation') {
+        selectRecommendation(value);
+      }
+    }
+
+    function renderActionImpactCards(items, context = {}) {
+      const { relatedMetricSet = new Set(), focusSkillSet = new Set() } = context;
+      if (!items.length) return '<p class="muted">No action impact details.</p>';
+      return items.map(item => {
+        const metricNames = Object.keys(item.metric_impacts || {});
+        const isActive = selectedActionId === item.action_id;
+        const matchesMetric = selectedMetric && metricNames.includes(selectedMetric);
+        const matchesFocusedActionMetric = !selectedMetric && relatedMetricSet.size
+          ? metricNames.some(metric => relatedMetricSet.has(metric))
+          : false;
+        const matchesSkill = selectedSkillId
+          ? (item.changed_skill_ids || []).includes(selectedSkillId) || (item.target_skill_ids || []).includes(selectedSkillId)
+          : focusSkillSet.size
+            ? [...(item.changed_skill_ids || []), ...(item.target_skill_ids || [])].some(skillId => focusSkillSet.has(skillId))
+            : false;
+        const isRelated = matchesMetric || matchesFocusedActionMetric || matchesSkill;
+        const isFiltered = (selectedMetric || selectedSkillId || selectedActionId) && !isActive && !isRelated;
+        return `
+          <div class="queue-card action-impact-card ${isActive ? 'active-row' : ''} ${isRelated ? 'related-row' : ''} ${isFiltered ? 'filtered-row' : ''}" onclick="selectAction('${item.action_id}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+              <div>
+                <strong>${item.action_id}</strong>
+                <div class="muted" style="margin-top:6px;">${actionKindLabel(item)} · status=${item.status}</div>
+              </div>
+              <span class="delta-chip ${item.status === 'applied' ? 'positive' : 'neutral'}">${item.status}</span>
+            </div>
+            <div class="pill-row">
+              ${item.action_subtype ? `<span class="pill">intent=${item.action_subtype}</span>` : ''}
+              ${(item.target_skill_ids || []).map(skillId => `<span class="pill">target=${skillId}</span>`).join('') || '<span class="muted">No targets.</span>'}
+            </div>
+            <div class="pill-row">
+              ${(item.changed_skill_ids || []).map(skillId => `<span class="pill">changed=${skillId}</span>`).join('') || '<span class="muted">No changed skills.</span>'}
+            </div>
+            <div class="pill-row">
+              ${metricNames.map(metric => {
+                const metricImpact = item.metric_impacts[metric] || {};
+                return `<span class="pill">${metric}=${signedNumber(metricImpact.delta)}</span>`;
+              }).join('') || '<span class="muted">No metric impacts.</span>'}
+            </div>
+            ${item.notes ? `<div class="muted" style="margin-top:8px;">${item.notes}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function hydrateRecommendationRows(items) {
+      return (items || []).map(item => {
+        const state = recommendationDecisions[item.id] || {};
+        return {
+          ...item,
+          decision_status: state.status || null,
+          decision_updated_at: state.updated_at || null,
+        };
+      });
+    }
+
+    function summarizeRecommendationDecisions(items) {
+      return (items || []).reduce((summary, item) => {
+        summary.total += 1;
+        if (item.decision_status === 'accepted') summary.accepted += 1;
+        if (item.decision_status === 'dismissed') summary.dismissed += 1;
+        if (item.decision_status === 'needs_review') summary.needs_review += 1;
+        return summary;
+      }, { total: 0, accepted: 0, dismissed: 0, needs_review: 0 });
+    }
+
+    function renderOperationsPanel(items, summary) {
+      if (!items.length) return '';
+      const actionableItems = items.filter(item => !selectedDecisionFilter || item.decision_status === selectedDecisionFilter);
+      const topPending = actionableItems.filter(item => !item.decision_status).slice(0, 3);
+      const topReview = actionableItems.filter(item => item.decision_status === 'needs_review').slice(0, 3);
+      return `
+        <div class="section operations-panel ${shareModeSectionClass(false, shareMode && !selectedRecommendationId)}">
+          <h2>Operations Panel</h2>
+          <div class="operations-grid">
+            <div>
+              <div class="muted">Move from review to action without leaving the viewer.</div>
+              <div class="pill-row">
+                ${selectedDecisionFilter ? `<span class="pill">decision_filter=${decisionLabel(selectedDecisionFilter)}</span>` : '<span class="pill">decision_filter=all</span>'}
+                <span class="pill">visible=${actionableItems.length}</span>
+                <span class="pill">accepted=${summary.accepted}</span>
+                <span class="pill">dismissed=${summary.dismissed}</span>
+                <span class="pill">needs_review=${summary.needs_review}</span>
+              </div>
+              <div class="operations-actions">
+                <button class="action-link" type="button" onclick="applyDecisionToVisible('needs_review')">Mark visible as needs review</button>
+                <button class="action-link" type="button" onclick="applyDecisionToVisible('accepted')">Accept visible</button>
+                <button class="action-link" type="button" onclick="clearVisibleDecisions()">Clear visible decisions</button>
+                ${selectedDecisionFilter ? '<button class="action-link" type="button" onclick="setDecisionFilter(\'\')">Clear decision filter</button>' : ''}
+              </div>
+            </div>
+            <div>
+              <div class="stat-label">Next review queue</div>
+              <div class="operations-list">
+                ${topPending.map(item => `
+                  <div class="operations-item">
+                    <strong>${item.id}</strong>
+                    <div class="muted">${item.summary}</div>
+                    <div class="pill-row">
+                      <button class="action-link" type="button" onclick="selectRecommendation('${item.id}')">Focus</button>
+                      <button class="action-link" type="button" onclick="setRecommendationDecision('${item.id}', 'needs_review')">Needs review</button>
+                    </div>
+                  </div>
+                `).join('') || '<div class="operations-item"><strong>No unreviewed recommendations.</strong><div class="muted">Visible recommendations are already classified.</div></div>'}
+                ${topReview.map(item => `
+                  <div class="operations-item">
+                    <strong>${item.id}</strong>
+                    <div class="muted">ready for operator follow-up</div>
+                    <div class="pill-row">
+                      <button class="action-link" type="button" onclick="selectRecommendation('${item.id}')">Focus</button>
+                      <button class="action-link" type="button" onclick="setRecommendationDecision('${item.id}', 'accepted')">Accept</button>
+                      <button class="action-link" type="button" onclick="setRecommendationDecision('${item.id}', 'dismissed')">Dismiss</button>
+                    </div>
+                  </div>
+                `).join('')}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function setDecisionFilter(status) {
+      selectedDecisionFilter = selectedDecisionFilter === status ? '' : status;
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function applyDecisionToVisible(status) {
+      const visibleItems = filterRecommendationQueue(hydrateRecommendationRows(currentReport?.views?.recommendation_queue || []));
+      visibleItems.forEach(item => {
+        recommendationDecisions[item.id] = {
+          status,
+          updated_at: new Date().toISOString(),
+        };
+      });
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function clearVisibleDecisions() {
+      const visibleItems = filterRecommendationQueue(hydrateRecommendationRows(currentReport?.views?.recommendation_queue || []));
+      visibleItems.forEach(item => {
+        delete recommendationDecisions[item.id];
+      });
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function decisionLabel(status) {
+      if (status === 'accepted') return 'accepted';
+      if (status === 'dismissed') return 'dismissed';
+      if (status === 'needs_review') return 'needs review';
+      return 'unreviewed';
+    }
+
+    function renderDecisionBadge(status) {
+      if (!status) return '<span class="delta-chip neutral">unreviewed</span>';
+      return `<span class="decision-badge ${status}">${decisionLabel(status)}</span>`;
+    }
+
+    function renderDecisionControls(item) {
+      const currentStatus = item?.decision_status || null;
+      return `
+        <div class="decision-controls" onclick="event.stopPropagation()">
+          ${['accepted', 'dismissed', 'needs_review'].map(status => `
+            <button class="decision-button ${currentStatus === status ? `active ${status}` : ''}" type="button" onclick="setRecommendationDecision('${item.id}', '${status}')">${decisionLabel(status)}</button>
+          `).join('')}
+          ${currentStatus ? `<button class="decision-button" type="button" onclick="clearRecommendationDecision('${item.id}')">clear</button>` : ''}
+        </div>
+      `;
+    }
+
+    function setRecommendationDecision(recommendationId, status) {
+      recommendationDecisions[recommendationId] = {
+        status,
+        updated_at: new Date().toISOString(),
+      };
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function clearRecommendationDecision(recommendationId) {
+      delete recommendationDecisions[recommendationId];
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function buildDecisionExportMap(items) {
+      const decisions = {};
+      (items || []).forEach(item => {
+        if (!item.id || !item.decision_status) return;
+        decisions[item.id] = {
+          status: item.decision_status,
+          updated_at: item.decision_updated_at || null,
+        };
+      });
+      return decisions;
+    }
+
+    function applyDecisionStateToReport(report) {
+      if (!report) return report;
+      const recommendationQueue = hydrateRecommendationRows(report.views?.recommendation_queue || []);
+      return {
+        ...report,
+        views: {
+          ...(report.views || {}),
+          recommendation_queue: recommendationQueue,
+        },
+      };
+    }
+
+    function restoreRecommendationDecisions(report) {
+      const queue = report?.views?.recommendation_queue || [];
+      const nextState = {};
+      queue.forEach(item => {
+        if (!item.id || !item.decision_status) return;
+        nextState[item.id] = {
+          status: item.decision_status,
+          updated_at: item.decision_updated_at || null,
+        };
+      });
+      recommendationDecisions = nextState;
+    }
+
+    function renderOptimizationSkillTable(rows, focusSkillSet, skillActionMap) {
+      if (!rows.length) return '<p class="muted">No skill deltas available.</p>';
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th>Changed</th>
+              <th>Competition Δ</th>
+              <th>Anchor Δ</th>
+              <th>Black Hole Δ</th>
+              <th>Rewrite Δ</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => {
+              const relatedActions = skillActionMap.get(row.skill_id) || [];
+              const isExpanded = selectedSkillId === row.skill_id || focusSkillSet.has(row.skill_id);
+              return `
+                <tr class="clickable-row ${row.changed ? 'changed-row' : ''} ${isExpanded ? 'active-row' : ''}" onclick="selectSkillDelta('${row.skill_id}')">
+                  <td><strong>${row.skill_id}</strong></td>
+                  <td><span class="delta-chip ${row.changed ? 'positive' : 'neutral'}">${row.changed ? 'changed' : 'stable'}</span></td>
+                  <td class="${deltaTextClass(row.competition_score_delta)}">${signedNumber(row.competition_score_delta)}</td>
+                  <td class="${deltaTextClass(row.anchor_strength_delta)}">${signedNumber(row.anchor_strength_delta)}</td>
+                  <td class="${deltaTextClass(row.black_hole_risk_delta)}">${signedNumber(row.black_hole_risk_delta)}</td>
+                  <td class="${deltaTextClass(row.rewrite_priority_delta)}">${signedNumber(row.rewrite_priority_delta)}</td>
+                </tr>
+                ${isExpanded ? `
+                  <tr class="skill-detail-row">
+                    <td colspan="6">
+                      <div class="skill-detail-card">
+                        <div class="skill-detail-grid">
+                          <div>
+                            <div class="stat-label">Why this skill changed</div>
+                            <div class="focus-note">${buildSkillDeltaNarrative(row, relatedActions)}</div>
+                          </div>
+                          <div>
+                            <div class="stat-label">Related actions</div>
+                            <div class="pill-row">
+                              ${relatedActions.map(action => `<button class="action-link" type="button" onclick="event.stopPropagation(); selectAction('${action.action_id}')">${action.action_id}</button>`).join('') || '<span class="muted">No related actions.</span>'}
+                            </div>
+                          </div>
+                          <div>
+                            <div class="stat-label">Metric shifts</div>
+                            <div class="pill-row">
+                              ${buildSkillDeltaMetricPills(row)}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                ` : ''}
+              `;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function buildMetricContextMap(actions, rows) {
+      const skillRowsById = new Map((rows || []).map(row => [row.skill_id, row]));
+      const map = new Map();
+      (actions || []).forEach(action => {
+        Object.keys(action.metric_impacts || {}).forEach(metric => {
+          if (!map.has(metric)) map.set(metric, { actions: [], skills: [] });
+          const entry = map.get(metric);
+          if (!entry.actions.some(item => item.action_id === action.action_id)) {
+            entry.actions.push(action);
+          }
+          [...(action.changed_skill_ids || []), ...(action.target_skill_ids || [])].forEach(skillId => {
+            const row = skillRowsById.get(skillId);
+            if (row && !entry.skills.some(item => item.skill_id === skillId)) {
+              entry.skills.push(row);
+            }
+          });
+        });
+      });
+      return map;
+    }
+
+    function renderMetricDetailCard(metricCard, context) {
+      const actions = context.actions || [];
+      const skills = context.skills || [];
+      return `
+        <div class="metric-detail-card" onclick="event.stopPropagation()">
+          <div class="skill-detail-grid">
+            <div>
+              <div class="stat-label">Why this metric moved</div>
+              <div class="focus-note">${buildMetricNarrative(metricCard, actions, skills)}</div>
+            </div>
+            <div>
+              <div class="stat-label">Related actions</div>
+              <div class="pill-row">
+                ${actions.map(action => `<button class="action-link" type="button" onclick="selectAction('${action.action_id}')">${action.action_id}</button>`).join('') || '<span class="muted">No related actions.</span>'}
+              </div>
+            </div>
+            <div>
+              <div class="stat-label">Affected skills</div>
+              <div class="pill-row">
+                ${skills.map(skill => `<button class="action-link" type="button" onclick="selectSkillDelta('${skill.skill_id}')">${skill.skill_id}</button>`).join('') || '<span class="muted">No visible skills.</span>'}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function buildMetricNarrative(metricCard, actions, skills) {
+      if (!actions.length && !skills.length) {
+        return `Metric ${metricCard.metric} moved by ${signedNumber(metricCard.delta)} without a visible action-to-skill chain in the current filtered view.`;
+      }
+      const actionText = actions.length ? `${actions.length} related actions` : 'no mapped actions';
+      const skillText = skills.length ? `${skills.length} visible skills` : 'no visible skills';
+      return `Metric ${metricCard.metric} is ${directionLabel(metricCard.direction).toLowerCase()} by ${signedNumber(metricCard.delta)}, currently explained by ${actionText} and ${skillText}.`;
+    }
+
+    function buildSkillActionMap(actions) {
+      const map = new Map();
+      (actions || []).forEach(action => {
+        const skillIds = [...(action.target_skill_ids || []), ...(action.changed_skill_ids || [])];
+        skillIds.forEach(skillId => {
+          if (!map.has(skillId)) map.set(skillId, []);
+          const existing = map.get(skillId);
+          if (!existing.some(item => item.action_id === action.action_id)) {
+            existing.push(action);
+          }
+        });
+      });
+      return map;
+    }
+
+    function buildSkillDeltaNarrative(row, relatedActions) {
+      if (!row.changed) {
+        return `Skill ${row.skill_id} stayed stable, with only small metric movement across the optimization pass.`;
+      }
+      if (relatedActions.length) {
+        return `Skill ${row.skill_id} moved because ${relatedActions.map(action => action.action_id).join(', ')} targeted or changed it, shifting competition ${signedNumber(row.competition_score_delta)}, anchor ${signedNumber(row.anchor_strength_delta)}, black-hole ${signedNumber(row.black_hole_risk_delta)}, and rewrite ${signedNumber(row.rewrite_priority_delta)}.`;
+      }
+      return `Skill ${row.skill_id} changed in the scorecard even though no explicit related action was mapped in the current report.`;
+    }
+
+    function buildSkillDeltaMetricPills(row) {
+      return [
+        ['competition', row.competition_score_delta],
+        ['anchor', row.anchor_strength_delta],
+        ['black_hole', row.black_hole_risk_delta],
+        ['rewrite', row.rewrite_priority_delta],
+      ].map(([label, value]) => `<span class="pill">${label}=${signedNumber(value)}</span>`).join('');
+    }
+
+    function buildOptimizationFocusNarrative(context) {
+      const {
+        selectedMetricCard,
+        focusedAction,
+        selectedSkillId,
+        relatedActionCount,
+        visibleSkillCount,
+        relatedMetricCount,
+      } = context;
+      if (selectedMetricCard && focusedAction && selectedSkillId) {
+        return `Metric ${selectedMetricCard.metric} narrows to ${actionKindLabel(focusedAction)} action ${focusedAction.action_id}, which currently focuses skill ${selectedSkillId}.`;
+      }
+      if (selectedMetricCard && focusedAction) {
+        return `Metric ${selectedMetricCard.metric} is linked to ${actionKindLabel(focusedAction)} action ${focusedAction.action_id} across ${visibleSkillCount} visible skills.`;
+      }
+      if (focusedAction && selectedSkillId) {
+        return `${actionKindLabel(focusedAction)} action ${focusedAction.action_id} is centered on skill ${selectedSkillId} and highlights ${relatedMetricCount || 0} related metrics.`;
+      }
+      if (selectedMetricCard) {
+        return `Metric ${selectedMetricCard.metric} currently filters the action chain to ${relatedActionCount} related actions.`;
+      }
+      if (focusedAction) {
+        return `${actionKindLabel(focusedAction)} action ${focusedAction.action_id} currently highlights ${visibleSkillCount} visible skills and ${relatedMetricCount || 0} linked metrics.`;
+      }
+      if (selectedSkillId) {
+        return `Skill ${selectedSkillId} currently narrows the action chain to ${relatedActionCount} related actions.`;
+      }
+      return 'Click a metric, action, or skill to trace the optimization path.';
+    }
+
+    function metricCardClass(direction) {
+      if (direction === 'improved') return 'delta-positive';
+      if (direction === 'degraded') return 'delta-negative';
+      return 'delta-neutral';
+    }
+
+    function deltaTone(direction) {
+      if (direction === 'improved') return 'positive';
+      if (direction === 'degraded') return 'negative';
+      return 'neutral';
+    }
+
+    function directionLabel(direction) {
+      if (direction === 'improved') return 'Improved';
+      if (direction === 'degraded') return 'Degraded';
+      return 'Neutral';
+    }
+
+    function signedNumber(value) {
+      const number = Number(value ?? 0);
+      if (number > 0) return `+${number}`;
+      return `${number}`;
+    }
+
+    function actionKindLabel(action) {
+      if (!action) return 'action';
+      return action.action_subtype
+        ? `${action.action_type}/${action.action_subtype}`
+        : `${action.action_type}`;
+    }
+
+    function deltaTextClass(value) {
+      const number = Number(value ?? 0);
+      if (number > 0) return 'delta-text-positive';
+      if (number < 0) return 'delta-text-negative';
+      return 'delta-text-neutral';
+    }
+
+    function renderActionList(items, allActionImpactCards, groupLabel, emptyMessage) {
+      if (!items.length) return `<p class="muted">${emptyMessage}</p>`;
+      return items.map(actionId => {
+        const action = (allActionImpactCards || []).find(item => item.action_id === actionId) || null;
+        const metricNames = Object.keys(action?.metric_impacts || {});
+        const isActive = selectedActionId === actionId;
+        const matchesMetric = selectedMetric && metricNames.includes(selectedMetric);
+        const matchesSkill = selectedSkillId
+          ? (action?.changed_skill_ids || []).includes(selectedSkillId) || (action?.target_skill_ids || []).includes(selectedSkillId)
+          : false;
+        const isRelated = matchesMetric || matchesSkill;
+        const isFiltered = (selectedMetric || selectedSkillId || selectedActionId) && !isActive && !isRelated;
+        return `
+          <div class="queue-card action-list-card ${isActive ? 'active-row' : ''} ${isRelated ? 'related-row' : ''} ${isFiltered ? 'filtered-row' : ''}" onclick="selectAction('${actionId}')">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+              <div>
+                <strong>${actionId}</strong>
+                <div class="muted" style="margin-top:6px;">${action ? `${actionKindLabel(action)} · ${action.status}` : `${groupLabel} action`}</div>
+              </div>
+              <span class="delta-chip ${groupLabel === 'applied' ? 'positive' : 'neutral'}">${groupLabel}</span>
+            </div>
+            ${action ? `
+              <div class="pill-row">
+                ${action.action_subtype ? `<span class="pill">intent=${action.action_subtype}</span>` : ''}
+                ${(action.target_skill_ids || []).map(skillId => `<span class="pill">target=${skillId}</span>`).join('') || '<span class="muted">No targets.</span>'}
+              </div>
+              <div class="pill-row">
+                ${metricNames.map(metric => `<span class="pill">metric=${metric}</span>`).join('') || '<span class="muted">No metrics.</span>'}
+              </div>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function exportCurrentView() {
+      if (!currentReport) return;
+      if (currentReport.report_type === 'skill_manager_optimization') {
+        exportOptimizationSnapshot(currentReport);
+        return;
+      }
+      const reportWithDecisions = applyDecisionStateToReport(currentReport);
+      const allRiskRows = reportWithDecisions.views?.risk_table || [];
+      const allConflictRows = reportWithDecisions.views?.conflict_queue || [];
+      const allRecommendationRows = reportWithDecisions.views?.recommendation_queue || [];
+      const exported = {
+        report_type: reportWithDecisions.report_type,
+        exported_at: new Date().toISOString(),
+        state: {
+          filter: skillFilterInput.value.trim(),
+          sort: sortBySelect.value,
+          selected_skill_id: selectedSkillId || null,
+          selected_pair: selectedPair,
+          recommendation_decisions: buildDecisionExportMap(allRecommendationRows),
+        },
+        highlights: reportWithDecisions.highlights || {},
+        library: reportWithDecisions.sections?.library || reportWithDecisions.library_scorecard || {},
+        views: {
+          risk_table: filterAndSortRiskTable(allRiskRows),
+          conflict_queue: filterConflictQueue(allConflictRows),
+          recommendation_queue: filterRecommendationQueue(allRecommendationRows),
+        },
+        details: {
+          skill: selectedSkillId
+            ? allRiskRows.find(row => row.skill_id === selectedSkillId) || null
+            : null,
+          pair: selectedPair,
+        },
+      };
+      downloadJson(exported, 'auto-skill-manager-view.json');
+    }
+
+    function exportOptimizationSnapshot(report) {
+      const allActionImpactCards = report.views?.action_impact_cards || [];
+      const metricCards = report.views?.metric_delta_cards || [];
+      const activeFilter = skillFilterInput.value.trim().toLowerCase();
+      const metricFocusedActions = selectedMetric
+        ? allActionImpactCards.filter(item => Object.prototype.hasOwnProperty.call(item.metric_impacts || {}, selectedMetric))
+        : allActionImpactCards;
+      const skillFocusedActions = selectedSkillId
+        ? metricFocusedActions.filter(item => (item.changed_skill_ids || []).includes(selectedSkillId) || (item.target_skill_ids || []).includes(selectedSkillId))
+        : metricFocusedActions;
+      const visibleActionCards = selectedActionId
+        ? skillFocusedActions.filter(item => item.action_id === selectedActionId)
+        : skillFocusedActions;
+      const focusedAction = selectedActionId
+        ? allActionImpactCards.find(item => item.action_id === selectedActionId) || null
+        : null;
+      const relatedMetricSet = new Set(
+        focusedAction
+          ? Object.keys(focusedAction.metric_impacts || {})
+          : []
+      );
+      const focusSkillSet = new Set(
+        focusedAction
+          ? [...(focusedAction.changed_skill_ids || []), ...(focusedAction.target_skill_ids || [])]
+          : selectedSkillId
+            ? [selectedSkillId]
+            : []
+      );
+      const visibleSkillRows = (report.views?.skill_delta_table || []).filter(row => {
+        if (focusSkillSet.size && !focusSkillSet.has(row.skill_id)) return false;
+        if (!activeFilter) return true;
+        return String(row.skill_id || '').toLowerCase().includes(activeFilter);
+      }).sort((left, right) => Number(right.rewrite_priority_after ?? 0) - Number(left.rewrite_priority_after ?? 0));
+      const metricContextMap = buildMetricContextMap(allActionImpactCards, visibleSkillRows);
+      const skillActionMap = buildSkillActionMap(allActionImpactCards);
+      const selectedMetricCard = selectedMetric
+        ? metricCards.find(item => item.metric === selectedMetric) || null
+        : null;
+      const selectedSkillRow = selectedSkillId
+        ? visibleSkillRows.find(row => row.skill_id === selectedSkillId) || null
+        : null;
+      const selectedSkillActions = selectedSkillRow
+        ? skillActionMap.get(selectedSkillRow.skill_id) || []
+        : [];
+      const metricContext = selectedMetricCard
+        ? metricContextMap.get(selectedMetricCard.metric) || { actions: [], skills: [] }
+        : { actions: [], skills: [] };
+      const focusNarrative = buildOptimizationFocusNarrative({
+        selectedMetricCard,
+        focusedAction,
+        selectedSkillId,
+        relatedActionCount: visibleActionCards.length,
+        visibleSkillCount: visibleSkillRows.length,
+        relatedMetricCount: relatedMetricSet.size,
+      });
+      const snapshot = {
+        report_type: report.report_type,
+        exported_at: new Date().toISOString(),
+        export_type: 'optimization_focus_snapshot',
+        report_metadata: {
+          highlights: report.highlights || {},
+          scorecard_before: report.sections?.scorecard_before || {},
+          scorecard_after: report.sections?.scorecard_after || {},
+        },
+        state: {
+          filter: skillFilterInput.value.trim(),
+          sort: sortBySelect.value,
+          selected_metric: selectedMetric || null,
+          selected_action_id: selectedActionId || null,
+          selected_skill_id: selectedSkillId || null,
+        },
+        focus: {
+          narrative: focusNarrative,
+          selected_metric_card: selectedMetricCard,
+          selected_action: focusedAction,
+          selected_skill_row: selectedSkillRow,
+          selected_metric_explanation: selectedMetricCard
+            ? buildMetricNarrative(selectedMetricCard, metricContext.actions || [], metricContext.skills || [])
+            : null,
+          selected_skill_explanation: selectedSkillRow
+            ? buildSkillDeltaNarrative(selectedSkillRow, selectedSkillActions)
+            : null,
+        },
+        visible_entities: {
+          metrics: metricCards,
+          action_cards: visibleActionCards,
+          skill_rows: visibleSkillRows,
+        },
+        related_entities: {
+          metric_actions: metricContext.actions || [],
+          metric_skills: metricContext.skills || [],
+          skill_actions: selectedSkillActions,
+        },
+      };
+      downloadJson(snapshot, 'auto-skill-manager-optimization-snapshot.json');
+    }
+
+    function downloadJson(payload, filename) {
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function effectiveSkillQuery() {
+      return (selectedSkillId || skillFilterInput.value.trim()).toLowerCase();
+    }
+
+    function clearSelections() {
+      selectedSkillId = '';
+      selectedPair = null;
+      selectedActionId = '';
+      selectedMetric = '';
+      selectedRecommendationId = '';
+      selectedDecisionFilter = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function clearSelectedSkill() {
+      selectedSkillId = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function clearSelectedAction() {
+      selectedActionId = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function clearSelectedMetric() {
+      selectedMetric = '';
+      selectedActionId = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectSkill(skillId) {
+      selectedSkillId = skillId || '';
+      selectedPair = null;
+      selectedActionId = '';
+      selectedMetric = '';
+      selectedRecommendationId = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectSkillDelta(skillId) {
+      selectedSkillId = selectedSkillId === skillId ? '' : skillId;
+      selectedActionId = '';
+      selectedPair = null;
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectAction(actionId) {
+      selectedActionId = selectedActionId === actionId ? '' : actionId;
+      selectedSkillId = '';
+      selectedPair = null;
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectMetric(metric) {
+      selectedMetric = selectedMetric === metric ? '' : metric;
+      selectedActionId = '';
+      selectedSkillId = '';
+      selectedPair = null;
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectPair(leftSkillId, rightSkillId) {
+      selectedPair = { left_skill_id: leftSkillId, right_skill_id: rightSkillId };
+      selectedSkillId = '';
+      selectedActionId = '';
+      selectedMetric = '';
+      selectedRecommendationId = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function selectRecommendation(recommendationId) {
+      selectedRecommendationId = selectedRecommendationId === recommendationId ? '' : recommendationId;
+      selectedSkillId = '';
+      selectedPair = null;
+      selectedActionId = '';
+      selectedMetric = '';
+      syncHashState();
+      if (currentReport) renderReport(currentReport);
+    }
+
+    function filterAndSortRiskTable(rows, recommendationSkillSet = new Set()) {
+      const query = effectiveSkillQuery();
+      const pairSkills = selectedPair ? [selectedPair.left_skill_id, selectedPair.right_skill_id] : null;
+      const sortBy = sortBySelect.value;
+      return [...rows]
+        .filter(row => {
+          if (recommendationSkillSet.size) return recommendationSkillSet.has(row.skill_id);
+          if (pairSkills) return pairSkills.includes(row.skill_id);
+          if (!query) return true;
+          return [row.skill_id, row.family].filter(Boolean).some(value => String(value).toLowerCase().includes(query));
+        })
+        .sort((left, right) => Number(right?.[sortBy] ?? 0) - Number(left?.[sortBy] ?? 0));
+    }
+
+    function filterConflictQueue(items, recommendationSkillSet = new Set()) {
+      const query = effectiveSkillQuery();
+      if (selectedPair) {
+        return items.filter(item =>
+          item.left_skill_id === selectedPair.left_skill_id && item.right_skill_id === selectedPair.right_skill_id ||
+          item.left_skill_id === selectedPair.right_skill_id && item.right_skill_id === selectedPair.left_skill_id
+        );
+      }
+      if (recommendationSkillSet.size) {
+        return items.filter(item => recommendationSkillSet.has(item.left_skill_id) || recommendationSkillSet.has(item.right_skill_id));
+      }
+      if (!query) return items;
+      return items.filter(item =>
+        [item.left_skill_id, item.right_skill_id].some(value => String(value).toLowerCase().includes(query))
+      );
+    }
+
+    function filterRecommendationQueue(items) {
+      const query = effectiveSkillQuery();
+      let filtered = items;
+      if (selectedRecommendationId) {
+        filtered = filtered.filter(item => item.id === selectedRecommendationId);
+      } else if (selectedPair) {
+        const pairSkills = [selectedPair.left_skill_id, selectedPair.right_skill_id];
+        filtered = filtered.filter(item => pairSkills.every(skillId => (item.skill_ids || []).includes(skillId)));
+      } else if (query) {
+        filtered = filtered.filter(item =>
+          (item.skill_ids || []).some(value => String(value).toLowerCase().includes(query)) ||
+          String(item.summary || '').toLowerCase().includes(query)
+        );
+      }
+      if (selectedDecisionFilter) {
+        filtered = filtered.filter(item => item.decision_status === selectedDecisionFilter);
+      }
+      return filtered;
+    }
+
+    function renderDetailsPanel(allRiskRows, allConflictRows, allRecommendationRows, selectedRecommendation) {
+      if (selectedRecommendation) {
+        const relatedSkills = allRiskRows.filter(row => (selectedRecommendation.skill_ids || []).includes(row.skill_id));
+        const relatedConflicts = allConflictRows.filter(item =>
+          [item.left_skill_id, item.right_skill_id].some(skillId => (selectedRecommendation.skill_ids || []).includes(skillId))
+        );
+        return `
+          <div class="section">
+            <h2>Focused Recommendation Details</h2>
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-label">Recommendation</div><div class="stat-value">${selectedRecommendation.id}</div></div>
+              <div class="stat-card"><div class="stat-label">Type</div><div class="stat-value">${selectedRecommendation.type}</div></div>
+              <div class="stat-card"><div class="stat-label">Priority</div><div class="stat-value">${selectedRecommendation.priority}</div></div>
+              <div class="stat-card"><div class="stat-label">Confidence</div><div class="stat-value">${selectedRecommendation.confidence}</div></div>
+              <div class="stat-card"><div class="stat-label">Skills</div><div class="stat-value">${(selectedRecommendation.skill_ids || []).length}</div></div>
+              <div class="stat-card"><div class="stat-label">Related Conflicts</div><div class="stat-value">${relatedConflicts.length}</div></div>
+            </div>
+            <div class="pill-row">
+              ${renderDecisionBadge(selectedRecommendation.decision_status)}
+              ${(selectedRecommendation.skill_ids || []).map(skillId => `<button class="action-link" type="button" onclick="selectSkill('${skillId}')">${skillId}</button>`).join('') || '<span class="muted">No linked skills.</span>'}
+            </div>
+            ${renderDecisionControls(selectedRecommendation)}
+            <div class="focus-note">${selectedRecommendation.summary}</div>
+            <div class="pill-row">
+              ${selectedRecommendation.mapped_action ? `<span class="pill">action=${selectedRecommendation.mapped_action}</span>` : ''}
+              ${selectedRecommendation.rationale_signals?.map(signal => `<span class="pill">signal=${signal}</span>`).join('') || ''}
+              ${selectedRecommendation.decision_updated_at ? `<span class="pill">updated=${selectedRecommendation.decision_updated_at}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }
+      if (selectedPair) {
+        const relatedConflicts = allConflictRows.filter(item =>
+          item.left_skill_id === selectedPair.left_skill_id && item.right_skill_id === selectedPair.right_skill_id ||
+          item.left_skill_id === selectedPair.right_skill_id && item.right_skill_id === selectedPair.left_skill_id
+        );
+        const relatedRecommendations = allRecommendationRows.filter(item =>
+          [selectedPair.left_skill_id, selectedPair.right_skill_id].every(skillId => (item.skill_ids || []).includes(skillId))
+        );
+        const relatedRiskRows = allRiskRows.filter(row => [selectedPair.left_skill_id, selectedPair.right_skill_id].includes(row.skill_id));
+        return `
+          <div class="section">
+            <h2>Focused Pair Details</h2>
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-label">Pair</div><div class="stat-value">${selectedPair.left_skill_id}↔${selectedPair.right_skill_id}</div></div>
+              <div class="stat-card"><div class="stat-label">Risk Rows</div><div class="stat-value">${relatedRiskRows.length}</div></div>
+              <div class="stat-card"><div class="stat-label">Conflict Cards</div><div class="stat-value">${relatedConflicts.length}</div></div>
+              <div class="stat-card"><div class="stat-label">Recommendations</div><div class="stat-value">${relatedRecommendations.length}</div></div>
+            </div>
+            <div class="pill-row">
+              ${relatedRiskRows.map(row => `<span class="pill">${row.skill_id}: rewrite=${row.rewrite_priority}</span>`).join('') || '<span class="muted">No pair skill metrics.</span>'}
+            </div>
+          </div>
+        `;
+      }
+
+      if (selectedSkillId) {
+        const skill = allRiskRows.find(row => row.skill_id === selectedSkillId);
+        const relatedConflicts = allConflictRows.filter(item => [item.left_skill_id, item.right_skill_id].includes(selectedSkillId));
+        const relatedRecommendations = allRecommendationRows.filter(item => (item.skill_ids || []).includes(selectedSkillId));
+        if (!skill) return '';
+        return `
+          <div class="section">
+            <h2>Focused Skill Details</h2>
+            <div class="stats-grid">
+              <div class="stat-card"><div class="stat-label">Skill</div><div class="stat-value">${skill.skill_id}</div></div>
+              <div class="stat-card"><div class="stat-label">Family</div><div class="stat-value">${skill.family || '-'}</div></div>
+              <div class="stat-card"><div class="stat-label">Rewrite Priority</div><div class="stat-value">${skill.rewrite_priority}</div></div>
+              <div class="stat-card"><div class="stat-label">Black-hole Risk</div><div class="stat-value">${skill.black_hole_risk}</div></div>
+              <div class="stat-card"><div class="stat-label">Competition</div><div class="stat-value">${skill.competition_score}</div></div>
+              <div class="stat-card"><div class="stat-label">Anchor Strength</div><div class="stat-value">${skill.anchor_strength_score}</div></div>
+            </div>
+            <div class="pill-row">
+              <span class="pill">related conflicts=${relatedConflicts.length}</span>
+              <span class="pill">related recommendations=${relatedRecommendations.length}</span>
+            </div>
+          </div>
+        `;
+      }
+
+      return '';
+    }
+
+    function renderSkillFocus(focus) {
+      if (!focus || !focus.skill_id) return '';
+      return `
+        <div class="queue-card" style="margin-bottom:16px;">
+          <strong>Focus skill: ${focus.skill_id}</strong>
+          <div class="muted" style="margin-top:8px;">related conflicts=${focus.related_conflict_count} · related recommendations=${focus.related_recommendation_count}</div>
+        </div>
+      `;
+    }
+
+    function renderRiskTable(rows) {
+      if (!rows.length) return '<p class="muted">No risk rows available.</p>';
+      return `
+        <table>
+          <thead>
+            <tr>
+              <th>Skill</th>
+              <th>Family</th>
+              <th>Competition</th>
+              <th>Anchor</th>
+              <th>Black Hole</th>
+              <th>Rewrite Priority</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rows.map(row => `
+              <tr class="clickable-row ${selectedSkillId === row.skill_id ? 'active-row' : ''}" onclick="selectSkill('${row.skill_id}')">
+                <td><button class="action-link" type="button">${row.skill_id}</button></td>
+                <td>${row.family || '-'}</td>
+                <td>${row.competition_score}</td>
+                <td>${row.anchor_strength_score}</td>
+                <td>${row.black_hole_risk}</td>
+                <td>${row.rewrite_priority}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function renderRecommendationQueue(items) {
+      if (!items.length) return '<p class="muted">No recommendations.</p>';
+      return items.map(item => {
+        const isActive = selectedRecommendationId === item.id;
+        const isRelated = !isActive && selectedSkillId
+          ? (item.skill_ids || []).includes(selectedSkillId)
+          : false;
+        const isFiltered = (selectedRecommendationId || selectedSkillId) && !isActive && !isRelated;
+        return `
+          <div class="queue-card recommendation-card ${isActive ? 'active-row' : ''} ${isRelated ? 'related-row' : ''} ${isFiltered ? 'filtered-row' : ''}" onclick="selectRecommendation('${item.id}')">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <strong>${item.summary}</strong>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
+                ${renderDecisionBadge(item.decision_status)}
+                <span class="badge">${item.priority}</span>
+              </div>
+            </div>
+            <div class="muted" style="margin-top:8px;">type=${item.type} · confidence=${item.confidence}</div>
+            <div class="muted" style="margin-top:6px;">skills: ${(item.skill_ids || []).join(', ') || '-'}</div>
+            <div class="pill-row">
+              ${item.mapped_action ? `<span class="pill">action=${item.mapped_action}</span>` : ''}
+              ${(item.rationale_signals || []).map(signal => `<span class="pill">signal=${signal}</span>`).join('')}
+            </div>
+            ${renderDecisionControls(item)}
+            ${item.mapped_action_notes ? `<div class="focus-note">${item.mapped_action_notes}</div>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderConflictQueue(items) {
+      if (!items.length) return '<p class="muted">No conflicts.</p>';
+      return items.map(item => {
+        const isActive = selectedPair && (
+          item.left_skill_id === selectedPair.left_skill_id && item.right_skill_id === selectedPair.right_skill_id ||
+          item.left_skill_id === selectedPair.right_skill_id && item.right_skill_id === selectedPair.left_skill_id
+        );
+        return `
+          <div class="queue-card ${isActive ? 'active-row' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+              <strong>${item.left_skill_id} ↔ ${item.right_skill_id}</strong>
+              <button class="action-link" type="button" onclick="selectPair('${item.left_skill_id}', '${item.right_skill_id}')">Focus pair</button>
+            </div>
+            <div class="muted" style="margin-top:8px;">competition=${item.competition_risk} · overlap=${item.overlap_score}</div>
+            <div class="muted" style="margin-top:6px;">direction=${item.interference_direction}</div>
+          </div>
+        `;
+      }).join('');
+    }
+  </script>
+</body>
+</html>

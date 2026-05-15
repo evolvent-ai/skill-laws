@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Auto Skill Manager Console</title>
+  <style>
+    * { box-sizing: border-box; }
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --panel-soft: #f9fafb;
+      --ink: #18202f;
+      --muted: #667085;
+      --line: #d9e0ea;
+      --blue: #2456d6;
+      --cyan: #0e7490;
+      --green: #16803c;
+      --amber: #b45309;
+      --red: #b42318;
+      --shadow: 0 10px 28px rgba(24, 32, 47, 0.08);
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .shell { min-height: 100vh; display: grid; grid-template-columns: 248px minmax(0, 1fr); }
+    .rail {
+      background: #111827;
+      color: #eef2ff;
+      padding: 18px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .brand { padding: 10px 10px 6px; }
+    .brand h1 { margin: 0; font-size: 1.05rem; font-weight: 760; }
+    .brand p { margin: 6px 0 0; color: #b8c1d6; font-size: 0.82rem; line-height: 1.4; }
+    .nav { display: grid; gap: 4px; }
+    .nav button {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 0;
+      background: transparent;
+      color: #d5dbeb;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: left;
+    }
+    .nav button.active { background: #273449; color: #ffffff; }
+    .nav svg { width: 17px; height: 17px; flex: 0 0 auto; }
+    .rail-card {
+      border: 1px solid rgba(255,255,255,0.13);
+      border-radius: 8px;
+      padding: 12px;
+      background: rgba(255,255,255,0.05);
+    }
+    .rail-card strong { display: block; font-size: 0.86rem; }
+    .rail-card span { display: block; margin-top: 5px; color: #b8c1d6; font-size: 0.8rem; line-height: 1.4; }
+    .main { min-width: 0; padding: 20px; }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .title h2 { margin: 0; font-size: 1.35rem; }
+    .title p { margin: 5px 0 0; color: var(--muted); font-size: 0.9rem; }
+    .top-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+    .btn {
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 8px 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 36px;
+    }
+    .btn.primary { background: var(--blue); border-color: var(--blue); color: #fff; }
+    .btn.danger { color: var(--red); border-color: #fecaca; background: #fff7f7; }
+    .btn svg { width: 16px; height: 16px; }
+    .workspace {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) 370px;
+      gap: 16px;
+      align-items: start;
+    }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+    .panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-head h3 { margin: 0; font-size: 1rem; }
+    .panel-head p { margin: 4px 0 0; color: var(--muted); font-size: 0.82rem; }
+    .panel-body { padding: 16px; }
+    .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      min-height: 88px;
+    }
+    .metric span { color: var(--muted); font-size: 0.78rem; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 7px; font-size: 1.55rem; }
+    .metric small { display: block; margin-top: 4px; color: var(--muted); }
+    .filters { display: grid; grid-template-columns: 1.3fr 0.8fr 0.8fr; gap: 10px; }
+    .field label { display: block; color: var(--muted); font-size: 0.78rem; margin-bottom: 6px; }
+    .field input, .field select, .field textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 9px 10px;
+      min-height: 38px;
+    }
+    .table-wrap { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 760px; }
+    th, td { padding: 11px 12px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 0.76rem; text-transform: uppercase; background: #f8fafc; }
+    tr.selected { background: #eef4ff; }
+    .skill-name { font-weight: 720; }
+    .muted { color: var(--muted); }
+    .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 0.76rem;
+      background: #eef2f7;
+      color: #344054;
+      white-space: nowrap;
+    }
+    .chip.green { background: #dcfce7; color: #166534; }
+    .chip.amber { background: #fef3c7; color: #92400e; }
+    .chip.red { background: #fee2e2; color: #991b1b; }
+    .chip.blue { background: #dbeafe; color: #1d4ed8; }
+    .scorebar { width: 92px; height: 7px; background: #e5e7eb; border-radius: 999px; overflow: hidden; margin-top: 5px; }
+    .scorebar i { display: block; height: 100%; background: var(--blue); }
+    .tabs { display: flex; gap: 6px; border-bottom: 1px solid var(--line); padding: 0 16px; }
+    .tabs button {
+      border: 0;
+      background: transparent;
+      padding: 12px 9px;
+      color: var(--muted);
+      border-bottom: 2px solid transparent;
+    }
+    .tabs button.active { color: var(--blue); border-bottom-color: var(--blue); }
+    .stack { display: grid; gap: 12px; }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+    .item.active { border-color: #93b4ff; background: #f5f8ff; }
+    .item-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+    .item h4 { margin: 0; font-size: 0.95rem; }
+    .item p { margin: 7px 0 0; color: var(--muted); font-size: 0.84rem; line-height: 1.45; }
+    .split { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    .dropzone {
+      border: 1px dashed #9aa8bc;
+      border-radius: 8px;
+      padding: 14px;
+      background: #fbfcff;
+    }
+    .log {
+      background: #0b1220;
+      color: #dbeafe;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      line-height: 1.5;
+      max-height: 190px;
+      overflow: auto;
+    }
+    .hidden { display: none !important; }
+    .empty { padding: 26px; text-align: center; color: var(--muted); }
+    @media (max-width: 1120px) {
+      .shell { grid-template-columns: 1fr; }
+      .rail { position: sticky; top: 0; z-index: 2; border-bottom: 1px solid #273449; }
+      .nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .workspace { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 720px) {
+      .main { padding: 12px; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .filters, .split { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+      .nav { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <aside class="rail">
+      <div class="brand">
+        <h1>Auto Skill Manager</h1>
+        <p>Library control plane for routing risk, sync targets, presets, and project workspaces.</p>
+      </div>
+      <nav class="nav" id="nav"></nav>
+      <div class="rail-card">
+        <strong>Current profile</strong>
+        <span id="profileText">balanced-production · 3 sync targets · 7 pending changes</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <div class="title">
+          <h2 id="viewTitle">Library Operations</h2>
+          <p id="viewSubtitle">Audit skills, stage updates, and publish controlled workspace bundles.</p>
+        </div>
+        <div class="top-actions">
+          <label class="btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M17 8l-5-5-5 5"/><path d="M12 3v12"/></svg>
+            Import report
+            <input id="reportFile" class="hidden" type="file" accept="application/json">
+          </label>
+          <button class="btn" id="backupBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+            Backup plan
+          </button>
+          <button class="btn primary" id="publishBtn" type="button">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>
+            Stage publish
+          </button>
+        </div>
+      </div>
+
+      <section id="view"></section>
+    </main>
+  </div>
+
+  <script>
+    const icons = {
+      library: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M4 4.5A2.5 2.5 0 0 1 6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5z"/></svg>',
+      marketplace: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2l1 5h10l1-5"/><path d="M3 7h18l-2 14H5L3 7z"/><path d="M9 11h6"/></svg>',
+      workspaces: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>',
+      sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 1-15.5 6.3L3 16"/><path d="M3 12A9 9 0 0 1 18.5 5.7L21 8"/><path d="M3 16h5"/><path d="M16 8h5"/></svg>',
+      presets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 21V14"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/><path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/></svg>',
+      settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15.5A3.5 3.5 0 1 0 12 8a3.5 3.5 0 0 0 0 7.5z"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1A2 2 0 1 1 4.2 17l.1-.1A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1A2 2 0 1 1 7 4.2l.1.1A1.7 1.7 0 0 0 9 4.6 1.7 1.7 0 0 0 10 3V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1A2 2 0 1 1 19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
+    };
+
+    const state = {
+      view: 'library',
+      selectedSkill: 'code-search-pro',
+      filter: '',
+      family: 'all',
+      status: 'all',
+      selected: new Set(),
+      reportLoaded: false,
+      log: [
+        '09:41 loaded profile balanced-production',
+        '09:42 checked 3 workspace targets',
+        '09:44 queued 7 library changes'
+      ],
+      skills: [
+        { id: 'code-search-pro', name: 'Code Search Pro', family: 'code', tags: ['search', 'repository'], status: 'installed', risk: 0.18, anchors: 0.82, conflicts: 2, source: 'global', description: 'Search code with structural filters, symbol context, and path-aware ranking.' },
+        { id: 'smart-file-reader', name: 'Smart File Reader', family: 'file', tags: ['reader', 'context'], status: 'installed', risk: 0.42, anchors: 0.51, conflicts: 6, source: 'global', description: 'Read project files and extract relevant implementation details for follow-up work.' },
+        { id: 'generic-helper', name: 'Generic Helper', family: 'utility', tags: ['broad', 'abstract'], status: 'quarantined', risk: 0.83, anchors: 0.19, conflicts: 14, source: 'legacy', description: 'Handle many general tasks and workflows across different projects.' },
+        { id: 'db-query-auditor', name: 'DB Query Auditor', family: 'database', tags: ['sql', 'safety'], status: 'installed', risk: 0.29, anchors: 0.74, conflicts: 3, source: 'market', description: 'Review SQL queries for correctness, indexes, transaction behavior, and unsafe operations.' },
+        { id: 'npm-installer-lite', name: 'NPM Installer Lite', family: 'package', tags: ['npm', 'install'], status: 'candidate', risk: 0.34, anchors: 0.63, conflicts: 5, source: 'market', description: 'Install JavaScript dependencies with lockfile checks and package-manager detection.' },
+        { id: 'test-runner-auto', name: 'Test Runner Auto', family: 'test', tags: ['pytest', 'ci'], status: 'installed', risk: 0.24, anchors: 0.77, conflicts: 3, source: 'project', description: 'Run targeted tests, parse failures, and report the smallest useful verification set.' }
+      ],
+      targets: [
+        { id: 'global', name: 'Global Workspace', path: '~/.codex/skills', enabled: true, pending: 3, mode: 'mirror' },
+        { id: 'agent', name: 'Agent Workspace', path: '.agents/skills', enabled: true, pending: 2, mode: 'selective' },
+        { id: 'project', name: 'Project Workspace', path: './.codex/skills', enabled: false, pending: 2, mode: 'manual' }
+      ],
+      presets: [
+        { id: 'balanced-production', name: 'Balanced production', rules: ['danger-zone review', 'abstract quarantine', 'domain gated context'], active: true },
+        { id: 'minimal-router', name: 'Minimal router', rules: ['top 80 only', 'no abstract skills', 'strict anchors'], active: false },
+        { id: 'research-full', name: 'Research full library', rules: ['keep candidates', 'show conflicts', 'loose sync'], active: false }
+      ],
+      changes: [
+        { id: 'c1', type: 'rewrite', skill: 'smart-file-reader', detail: 'Add concrete input/output boundary and reduce overlap with code-search-pro.', status: 'staged' },
+        { id: 'c2', type: 'remove', skill: 'generic-helper', detail: 'Quarantine abstract broad helper from flat routing pool.', status: 'review' },
+        { id: 'c3', type: 'install', skill: 'npm-installer-lite', detail: 'Install only in package-heavy project workspace.', status: 'queued' },
+        { id: 'c4', type: 'sync', skill: 'test-runner-auto', detail: 'Push project override to agent workspace.', status: 'queued' }
+      ]
+    };
+
+    const views = [
+      ['library', 'Library', icons.library],
+      ['marketplace', 'Marketplace', icons.marketplace],
+      ['workspaces', 'Workspaces', icons.workspaces],
+      ['sync', 'Sync', icons.sync],
+      ['presets', 'Presets', icons.presets],
+      ['settings', 'Settings', icons.settings]
+    ];
+
+    const nav = document.getElementById('nav');
+    const view = document.getElementById('view');
+    const title = document.getElementById('viewTitle');
+    const subtitle = document.getElementById('viewSubtitle');
+    const reportFile = document.getElementById('reportFile');
+    document.getElementById('backupBtn').addEventListener('click', () => pushLog('created backup plan snapshot'));
+    document.getElementById('publishBtn').addEventListener('click', () => {
+      state.changes.forEach(change => { if (change.status !== 'review') change.status = 'staged'; });
+      pushLog('staged publish bundle for enabled sync targets');
+      render();
+    });
+    reportFile.addEventListener('change', handleReportImport);
+
+    function init() {
+      nav.innerHTML = views.map(([id, label, icon]) => `<button type="button" data-view="${id}">${icon}<span>${label}</span></button>`).join('');
+      nav.addEventListener('click', event => {
+        const button = event.target.closest('button[data-view]');
+        if (!button) return;
+        state.view = button.dataset.view;
+        render();
+      });
+      render();
+    }
+
+    async function handleReportImport(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+      try {
+        const payload = JSON.parse(await file.text());
+        const imported = (payload.skill_scorecards || []).slice(0, 60).map(card => ({
+          id: card.skill_id,
+          name: card.skill_id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          family: card.details?.family || 'imported',
+          tags: ['report'],
+          status: card.rewrite_priority > 0.5 ? 'review' : 'installed',
+          risk: number(card.black_hole_risk ?? card.rewrite_priority),
+          anchors: number(card.anchor_strength_score),
+          conflicts: Math.round(number(card.competition_score) * 10),
+          source: 'report',
+          description: `Imported from report. Rewrite priority ${number(card.rewrite_priority).toFixed(2)}.`
+        }));
+        if (imported.length) {
+          state.skills = imported;
+          state.selectedSkill = imported[0].id;
+          state.reportLoaded = true;
+          pushLog(`imported ${imported.length} skills from report`);
+          render();
+        }
+      } catch (error) {
+        pushLog(`import failed: ${String(error).slice(0, 100)}`);
+        render();
+      }
+    }
+
+    function filteredSkills() {
+      const q = state.filter.trim().toLowerCase();
+      return state.skills.filter(skill => {
+        const text = `${skill.id} ${skill.name} ${skill.family} ${skill.tags.join(' ')} ${skill.description}`.toLowerCase();
+        return (!q || text.includes(q)) &&
+          (state.family === 'all' || skill.family === state.family) &&
+          (state.status === 'all' || skill.status === state.status);
+      }).sort((a, b) => b.risk - a.risk);
+    }
+
+    function render() {
+      nav.querySelectorAll('button').forEach(button => button.classList.toggle('active', button.dataset.view === state.view));
+      const active = views.find(([id]) => id === state.view);
+      title.textContent = active ? active[1] : 'Library';
+      subtitle.textContent = subtitles[state.view] || '';
+      document.getElementById('profileText').textContent = `${activePreset().name} · ${state.targets.filter(t => t.enabled).length} sync targets · ${state.changes.length} pending changes`;
+      view.innerHTML = renderView();
+      bindViewEvents();
+    }
+
+    const subtitles = {
+      library: 'Audit skills, queue changes, and keep risky abstractions out of flat routing.',
+      marketplace: 'Review candidate skills before installing them into any workspace.',
+      workspaces: 'Control which bundles are available globally, to agents, or to a project.',
+      sync: 'Stage, preview, and publish skill updates with backup-aware operations.',
+      presets: 'Switch between routing profiles without rewriting the underlying library.',
+      settings: 'Configure scan thresholds, backup retention, and import behavior.'
+    };
+
+    function renderView() {
+      if (state.view === 'marketplace') return renderMarketplace();
+      if (state.view === 'workspaces') return renderWorkspaces();
+      if (state.view === 'sync') return renderSync();
+      if (state.view === 'presets') return renderPresets();
+      if (state.view === 'settings') return renderSettings();
+      return renderLibrary();
+    }
+
+    function renderLibrary() {
+      const skills = filteredSkills();
+      const selected = state.skills.find(skill => skill.id === state.selectedSkill) || skills[0] || state.skills[0];
+      return `
+        ${renderMetrics()}
+        <div class="workspace">
+          <div class="panel">
+            <div class="panel-head">
+              <div><h3>Managed Skill Library</h3><p>${skills.length} visible skills · ${state.reportLoaded ? 'report imported' : 'sample operations data'}</p></div>
+              <button class="btn" data-action="select-visible" type="button">Select visible</button>
+            </div>
+            <div class="panel-body">
+              <div class="filters">
+                <div class="field"><label>Search</label><input id="filterInput" value="${escapeHtml(state.filter)}" placeholder="skill, tag, family"></div>
+                <div class="field"><label>Family</label>${familySelect()}</div>
+                <div class="field"><label>Status</label>${statusSelect()}</div>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th></th><th>Skill</th><th>Family</th><th>Risk</th><th>Anchors</th><th>Status</th><th>Action</th></tr></thead>
+                <tbody>${skills.map(renderSkillRow).join('')}</tbody>
+              </table>
+            </div>
+          </div>
+          <aside class="panel">
+            <div class="panel-head"><div><h3>Skill Inspector</h3><p>${selected ? selected.id : 'No skill selected'}</p></div></div>
+            <div class="panel-body">${selected ? renderInspector(selected) : '<div class="empty">Select a skill to inspect.</div>'}</div>
+          </aside>
+        </div>`;
+    }
+
+    function renderMetrics() {
+      const installed = state.skills.filter(s => s.status === 'installed').length;
+      const highRisk = state.skills.filter(s => s.risk >= 0.65).length;
+      const weakAnchors = state.skills.filter(s => s.anchors < 0.45).length;
+      const queued = state.changes.length;
+      return `<div class="metrics">
+        ${metric('Installed', installed, 'active library cards')}
+        ${metric('High risk', highRisk, 'rewrite or quarantine')}
+        ${metric('Weak anchors', weakAnchors, 'needs concrete boundaries')}
+        ${metric('Queued changes', queued, 'before publish')}
+      </div>`;
+    }
+
+    function metric(label, value, note) {
+      return `<div class="metric"><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`;
+    }
+
+    function renderSkillRow(skill) {
+      const selected = state.selected.has(skill.id);
+      return `<tr class="${state.selectedSkill === skill.id ? 'selected' : ''}" data-skill="${skill.id}">
+        <td><input type="checkbox" data-select="${skill.id}" ${selected ? 'checked' : ''}></td>
+        <td><div class="skill-name">${escapeHtml(skill.name)}</div><div class="muted">${escapeHtml(skill.description)}</div><div class="chip-row">${skill.tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('')}</div></td>
+        <td>${escapeHtml(skill.family)}</td>
+        <td>${score(skill.risk, riskClass(skill.risk))}</td>
+        <td>${score(skill.anchors, 'blue')}</td>
+        <td><span class="chip ${statusClass(skill.status)}">${skill.status}</span></td>
+        <td><button class="btn" data-queue="${skill.id}" type="button">Queue fix</button></td>
+      </tr>`;
+    }
+
+    function renderInspector(skill) {
+      return `<div class="stack">
+        <div class="item">
+          <div class="item-head"><h4>${escapeHtml(skill.name)}</h4><span class="chip ${statusClass(skill.status)}">${skill.status}</span></div>
+          <p>${escapeHtml(skill.description)}</p>
+        </div>
+        <div class="split">
+          <div class="item"><h4>Routing risk</h4>${score(skill.risk, riskClass(skill.risk))}</div>
+          <div class="item"><h4>Anchor strength</h4>${score(skill.anchors, 'blue')}</div>
+        </div>
+        <div class="item"><h4>Recommended operation</h4><p>${recommendationFor(skill)}</p><div class="chip-row"><span class="chip amber">boundary rewrite</span><span class="chip blue">neighbor audit</span></div></div>
+        <div class="split">
+          <button class="btn primary" data-queue="${skill.id}" type="button">Stage rewrite</button>
+          <button class="btn danger" data-quarantine="${skill.id}" type="button">Quarantine</button>
+        </div>
+      </div>`;
+    }
+
+    function renderMarketplace() {
+      const candidates = state.skills.filter(s => s.status === 'candidate' || s.source === 'market');
+      return `<div class="workspace">
+        <div class="panel">
+          <div class="panel-head"><div><h3>Candidate Queue</h3><p>Evaluate incoming skills before workspace sync.</p></div></div>
+          <div class="panel-body stack">${candidates.map(skill => `
+            <div class="item">
+              <div class="item-head"><h4>${escapeHtml(skill.name)}</h4><span class="chip blue">${skill.family}</span></div>
+              <p>${escapeHtml(skill.description)}</p>
+              <div class="chip-row"><span class="chip">risk ${skill.risk.toFixed(2)}</span><span class="chip">anchors ${skill.anchors.toFixed(2)}</span>${skill.tags.map(t => `<span class="chip">${escapeHtml(t)}</span>`).join('')}</div>
+              <div style="margin-top:10px"><button class="btn primary" data-install="${skill.id}" type="button">Install selectively</button> <button class="btn" data-queue="${skill.id}" type="button">Review overlap</button></div>
+            </div>`).join('') || '<div class="empty">No candidates.</div>'}</div>
+        </div>
+        <aside class="panel"><div class="panel-head"><div><h3>Install Policy</h3><p>Candidate gates</p></div></div><div class="panel-body stack">
+          <div class="item"><h4>Pre-install checks</h4><p>Anchor strength, nearest-neighbor overlap, abstract wording, family collision, and workspace scope.</p></div>
+          <div class="item"><h4>Default target</h4><p>Project workspace first, then promote to agent or global after clean usage.</p></div>
+        </div></aside>
+      </div>`;
+    }
+
+    function renderWorkspaces() {
+      return `<div class="workspace">
+        <div class="panel"><div class="panel-head"><div><h3>Workspace Targets</h3><p>Different scopes get different skill bundles.</p></div></div><div class="panel-body stack">
+          ${state.targets.map(target => `<div class="item ${target.enabled ? 'active' : ''}">
+            <div class="item-head"><h4>${target.name}</h4><span class="chip ${target.enabled ? 'green' : ''}">${target.enabled ? 'enabled' : 'disabled'}</span></div>
+            <p>${target.path}</p><div class="chip-row"><span class="chip">${target.mode}</span><span class="chip amber">${target.pending} pending</span></div>
+            <div style="margin-top:10px"><button class="btn" data-toggle-target="${target.id}" type="button">${target.enabled ? 'Disable' : 'Enable'}</button></div>
+          </div>`).join('')}
+        </div></div>
+        <aside class="panel"><div class="panel-head"><div><h3>Workspace Preview</h3><p>Selected profile: ${activePreset().name}</p></div></div><div class="panel-body"><div class="log">${state.log.map(escapeHtml).join('<br>')}</div></div></aside>
+      </div>`;
+    }
+
+    function renderSync() {
+      return `<div class="workspace">
+        <div class="panel"><div class="panel-head"><div><h3>Change Queue</h3><p>Stage changes before applying them to workspaces.</p></div><button class="btn primary" data-action="stage-all" type="button">Stage all</button></div>
+          <div class="panel-body stack">${state.changes.map(change => `<div class="item">
+            <div class="item-head"><h4>${change.type}: ${change.skill}</h4><span class="chip ${statusClass(change.status)}">${change.status}</span></div>
+            <p>${escapeHtml(change.detail)}</p>
+          </div>`).join('')}</div>
+        </div>
+        <aside class="panel"><div class="panel-head"><div><h3>Backup & Publish</h3><p>Safe apply sequence</p></div></div><div class="panel-body stack">
+          <div class="dropzone"><strong>Backup snapshot</strong><p class="muted">A timestamped bundle is created before publish.</p></div>
+          <button class="btn primary" data-action="publish" type="button">Publish staged changes</button>
+          <div class="log">${state.log.map(escapeHtml).join('<br>')}</div>
+        </div></aside>
+      </div>`;
+    }
+
+    function renderPresets() {
+      return `<div class="panel"><div class="panel-head"><div><h3>Routing Presets</h3><p>Profiles control visibility and rewrite thresholds.</p></div></div><div class="panel-body stack">
+        ${state.presets.map(preset => `<div class="item ${preset.active ? 'active' : ''}">
+          <div class="item-head"><h4>${preset.name}</h4><span class="chip ${preset.active ? 'green' : ''}">${preset.active ? 'active' : 'available'}</span></div>
+          <div class="chip-row">${preset.rules.map(rule => `<span class="chip">${rule}</span>`).join('')}</div>
+          <div style="margin-top:10px"><button class="btn" data-preset="${preset.id}" type="button">Activate</button></div>
+        </div>`).join('')}
+      </div></div>`;
+    }
+
+    function renderSettings() {
+      return `<div class="workspace">
+        <div class="panel"><div class="panel-head"><div><h3>Manager Settings</h3><p>Local-only static console settings.</p></div></div><div class="panel-body stack">
+          <div class="split"><div class="field"><label>Danger-zone threshold</label><input value="0.55 - 0.75"></div><div class="field"><label>Backup retention</label><input value="14 snapshots"></div></div>
+          <div class="field"><label>Ignored terms</label><textarea rows="4">generic, helper, workflow, utility, multiple</textarea></div>
+          <div class="field"><label>CLI path</label><input value="python3 -m auto_skill_manager.cli.main"></div>
+        </div></div>
+        <aside class="panel"><div class="panel-head"><div><h3>Local Commands</h3><p>Copy commands from the same repo.</p></div></div><div class="panel-body"><div class="log">python verify_open_source_bundle.py<br>open open_source/auto_skill_manager/viewer/manager.html<br>cd open_source/auto_skill_manager && PYTHONPATH=src python3 -m auto_skill_manager.cli.main --help</div></div></aside>
+      </div>`;
+    }
+
+    function bindViewEvents() {
+      const filter = document.getElementById('filterInput');
+      if (filter) filter.addEventListener('input', e => { state.filter = e.target.value; render(); });
+      const family = document.getElementById('familySelect');
+      if (family) family.addEventListener('change', e => { state.family = e.target.value; render(); });
+      const status = document.getElementById('statusSelect');
+      if (status) status.addEventListener('change', e => { state.status = e.target.value; render(); });
+      view.querySelectorAll('[data-skill]').forEach(row => row.addEventListener('click', e => {
+        if (e.target.matches('input,button')) return;
+        state.selectedSkill = row.dataset.skill;
+        render();
+      }));
+      view.querySelectorAll('[data-select]').forEach(input => input.addEventListener('change', e => {
+        const id = e.target.dataset.select;
+        if (e.target.checked) state.selected.add(id); else state.selected.delete(id);
+      }));
+      view.querySelectorAll('[data-queue]').forEach(button => button.addEventListener('click', () => queueFix(button.dataset.queue)));
+      view.querySelectorAll('[data-quarantine]').forEach(button => button.addEventListener('click', () => quarantine(button.dataset.quarantine)));
+      view.querySelectorAll('[data-install]').forEach(button => button.addEventListener('click', () => installCandidate(button.dataset.install)));
+      view.querySelectorAll('[data-toggle-target]').forEach(button => button.addEventListener('click', () => toggleTarget(button.dataset.toggleTarget)));
+      view.querySelectorAll('[data-preset]').forEach(button => button.addEventListener('click', () => activatePreset(button.dataset.preset)));
+      view.querySelectorAll('[data-action]').forEach(button => button.addEventListener('click', () => runAction(button.dataset.action)));
+    }
+
+    function queueFix(skillId) {
+      const skill = state.skills.find(s => s.id === skillId);
+      if (!skill) return;
+      state.changes.unshift({ id: `c${Date.now()}`, type: 'rewrite', skill: skill.id, detail: recommendationFor(skill), status: 'queued' });
+      pushLog(`queued rewrite for ${skill.id}`);
+      render();
+    }
+
+    function quarantine(skillId) {
+      const skill = state.skills.find(s => s.id === skillId);
+      if (!skill) return;
+      skill.status = 'quarantined';
+      state.changes.unshift({ id: `c${Date.now()}`, type: 'remove', skill: skill.id, detail: 'Quarantine from flat routing pool.', status: 'review' });
+      pushLog(`marked ${skill.id} for quarantine`);
+      render();
+    }
+
+    function installCandidate(skillId) {
+      const skill = state.skills.find(s => s.id === skillId);
+      if (!skill) return;
+      skill.status = 'installed';
+      state.changes.unshift({ id: `c${Date.now()}`, type: 'install', skill: skill.id, detail: 'Install into selected workspace after overlap review.', status: 'queued' });
+      pushLog(`queued install for ${skill.id}`);
+      render();
+    }
+
+    function toggleTarget(id) {
+      const target = state.targets.find(t => t.id === id);
+      if (!target) return;
+      target.enabled = !target.enabled;
+      pushLog(`${target.enabled ? 'enabled' : 'disabled'} ${target.name}`);
+      render();
+    }
+
+    function activatePreset(id) {
+      state.presets.forEach(preset => { preset.active = preset.id === id; });
+      pushLog(`activated preset ${activePreset().name}`);
+      render();
+    }
+
+    function runAction(action) {
+      if (action === 'select-visible') filteredSkills().forEach(skill => state.selected.add(skill.id));
+      if (action === 'stage-all') state.changes.forEach(change => { change.status = 'staged'; });
+      if (action === 'publish') {
+        state.changes = state.changes.filter(change => change.status !== 'staged');
+        pushLog('published staged changes');
+      }
+      render();
+    }
+
+    function pushLog(message) {
+      const now = new Date();
+      const hh = String(now.getHours()).padStart(2, '0');
+      const mm = String(now.getMinutes()).padStart(2, '0');
+      state.log.unshift(`${hh}:${mm} ${message}`);
+      state.log = state.log.slice(0, 8);
+    }
+
+    function familySelect() {
+      const families = ['all', ...Array.from(new Set(state.skills.map(s => s.family))).sort()];
+      return `<select id="familySelect">${families.map(f => `<option value="${f}" ${state.family === f ? 'selected' : ''}>${f}</option>`).join('')}</select>`;
+    }
+
+    function statusSelect() {
+      const statuses = ['all', 'installed', 'candidate', 'review', 'quarantined'];
+      return `<select id="statusSelect">${statuses.map(s => `<option value="${s}" ${state.status === s ? 'selected' : ''}>${s}</option>`).join('')}</select>`;
+    }
+
+    function score(value, color) {
+      const pct = Math.max(0, Math.min(100, Math.round(value * 100)));
+      return `<strong>${value.toFixed(2)}</strong><div class="scorebar"><i class="${color}" style="width:${pct}%; background:${barColor(color)}"></i></div>`;
+    }
+
+    function barColor(color) {
+      if (color === 'red') return 'var(--red)';
+      if (color === 'amber') return 'var(--amber)';
+      if (color === 'green') return 'var(--green)';
+      return 'var(--blue)';
+    }
+
+    function riskClass(value) {
+      if (value >= 0.65) return 'red';
+      if (value >= 0.4) return 'amber';
+      return 'green';
+    }
+
+    function statusClass(status) {
+      if (status === 'installed' || status === 'staged') return 'green';
+      if (status === 'quarantined' || status === 'review') return 'red';
+      if (status === 'candidate' || status === 'queued') return 'amber';
+      return 'blue';
+    }
+
+    function recommendationFor(skill) {
+      if (skill.risk >= 0.75) return 'Remove or narrow broad scope before it can become an attractor.';
+      if (skill.anchors < 0.45) return 'Rewrite description with concrete verbs, objects, outputs, and boundary exclusions.';
+      if (skill.conflicts >= 5) return 'Audit nearest neighbors and add bilateral boundary clauses.';
+      return 'Keep installed; monitor neighbor overlap during sync.';
+    }
+
+    function activePreset() {
+      return state.presets.find(p => p.active) || state.presets[0];
+    }
+
+    function number(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? n : 0;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+    }
+
+    init();
+  </script>
+</body>
+</html>

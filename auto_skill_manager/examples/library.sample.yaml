@@ -1,0 +1,138 @@
+library_id: sample_skill_library
+skills:
+  - id: parse_citation_pdf
+    name: Parse Citation PDF
+    description: Extract structured citation fields from an academic PDF and return title, authors, venue, and year.
+    examples:
+      - Extract the citation from this paper PDF.
+      - Parse bibliography metadata from a PDF file.
+    family: document_processing
+    tags: [pdf, citation, metadata]
+    inputs:
+      file_path:
+        type: string
+        required: true
+    outputs:
+      title:
+        type: string
+      authors:
+        type: array
+      venue:
+        type: string
+      year:
+        type: integer
+    anchors:
+      verbs: [extract, parse]
+      objects: [citation, metadata, pdf]
+      constraints: [academic papers only, structured fields]
+    metadata:
+      owner: research
+      source: internal
+      version: v1
+      created_at: null
+      updated_at: null
+
+  - id: summarize_pdf
+    name: Summarize PDF
+    description: Read a PDF document and produce a concise natural-language summary of its main ideas and key contributions.
+    examples:
+      - Summarize this paper in 5 bullet points.
+      - Give me the key contributions of this PDF.
+      - Extract the main ideas from this PDF document.
+    family: document_processing
+    tags: [pdf, summary, extract, document]
+    inputs:
+      file_path:
+        type: string
+        required: true
+    outputs:
+      summary:
+        type: string
+    anchors:
+      verbs: [summarize, extract, read]
+      objects: [pdf, document, paper, main ideas]
+      constraints: [natural-language summary, academic papers]
+    metadata:
+      owner: research
+      source: internal
+      version: v1
+      created_at: null
+      updated_at: null
+
+  - id: generic_data_handler
+    name: Generic Data Handler
+    description: Handle data tasks across multiple formats and workflows.
+    examples:
+      - Process this data for me.
+      - Handle the input and produce the needed result.
+    family: general_utility
+    tags: [generic, utility, data]
+    inputs:
+      payload:
+        type: object
+        required: true
+    outputs:
+      result:
+        type: object
+    anchors:
+      verbs: [handle, process]
+      objects: [data, input]
+      constraints: []
+    metadata:
+      owner: platform
+      source: internal
+      version: v1
+      created_at: null
+      updated_at: null
+
+  - id: generate_bibliography_entry
+    name: Generate Bibliography Entry
+    description: Convert structured paper metadata into a BibTeX bibliography entry.
+    examples:
+      - Turn this citation metadata into BibTeX.
+      - Create a bibliography entry from title, authors, venue, and year.
+    family: citation_tools
+    tags: [bibtex, bibliography, citation]
+    inputs:
+      title:
+        type: string
+        required: true
+      authors:
+        type: array
+        required: true
+      venue:
+        type: string
+        required: false
+      year:
+        type: integer
+        required: false
+    outputs:
+      bibtex:
+        type: string
+    anchors:
+      verbs: [convert, create]
+      objects: [bibtex, bibliography entry, citation metadata]
+      constraints: [structured metadata required]
+    metadata:
+      owner: research
+      source: internal
+      version: v1
+      created_at: null
+      updated_at: null
+
+pipeline_edges:
+  - upstream_skill: parse_citation_pdf
+    downstream_skill: generate_bibliography_entry
+    dependency_type: tight
+    weight: 0.95
+    notes: BibTeX generation requires structured metadata fields.
+  - upstream_skill: summarize_pdf
+    downstream_skill: generate_bibliography_entry
+    dependency_type: independent
+    weight: 0.10
+    notes: Summary output is not directly needed for bibliography generation.
+
+metadata:
+  domain: research_tools
+  owner: skill-manager-demo
+  version: v0

@@ -1,0 +1,25 @@
+id: parse_reference_section
+name: Parse Reference Section
+description: Extract individual bibliography entries from a paper's references section and return structured citation records.
+examples:
+  - Parse the references section into individual citations.
+  - Extract structured bibliography items from the paper references.
+family: citation_tools
+tags: [citation, bibliography, parsing]
+inputs:
+  reference_text:
+    type: string
+    required: true
+outputs:
+  citations:
+    type: array
+anchors:
+  verbs: [extract, parse]
+  objects: [references, bibliography entries, citations]
+  constraints: [references section only, structured citation records]
+metadata:
+  owner: research
+  source: candidate
+  version: v1
+  created_at: null
+  updated_at: null

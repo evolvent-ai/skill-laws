@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auto-skill-manager"
+version = "0.1.0"
+description = "Theory-driven management toolkit for large skill libraries"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pyyaml>=6.0",
+]
+
+[project.scripts]
+auto-skill-manager = "auto_skill_manager.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["auto_skill_manager*"]
