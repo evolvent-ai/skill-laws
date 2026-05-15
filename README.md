@@ -1,4 +1,4 @@
-# Auto Skill Manager
+# The Scaling Laws of Skills in LLM Agent Systems
 
 Reference implementation and experiment code for studying automatic management of large skill libraries.
 
