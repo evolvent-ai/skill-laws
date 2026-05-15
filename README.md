@@ -128,17 +128,6 @@ For a full smoke-test pass:
 PYTHONPATH=skill_law/src python3 skill_law/run_all_skill_law_scripts.py --timeout 240
 ```
 
-## Open-Source Hygiene
-
-The released code is self-contained and does not depend on local absolute paths. The only legacy path mapping is an internal compatibility layer in `skill_law/src/skill_law/paths.py` for users who already have older local experiment outputs. New outputs use the F01-F12 directory scheme.
-
-Before publishing, the bundle can be checked with:
-
-```bash
-python3 ../verify_open_source_bundle.py --quiet
-```
-
-from the project root that contains `open_source/`.
 
 ## License
 
@@ -157,5 +146,3 @@ If you use this repository in academic work, cite the paper artifact:
   note         = {Code: \url{https://github.com/evolvent-ai/auto-skill-manager}}
 }
 ```
-
-The same entry is available in [`CITATION.bib`](CITATION.bib). GitHub citation metadata is provided in [`CITATION.cff`](CITATION.cff).
